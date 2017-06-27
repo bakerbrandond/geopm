@@ -63,10 +63,10 @@ typedef int MPI_Win;
 
 extern "C"
 {
-    static std::vector<void *> g_params;
-    static std::vector<size_t> g_sizes;
+    std::vector<void *> g_params;
+    std::vector<size_t> g_sizes;
 
-    static void reset()
+    void reset()
     {
         for(auto it = g_params.begin(); it != g_params.end(); ++it) {
             if (*it) {
@@ -79,7 +79,7 @@ extern "C"
         g_sizes.clear();
     }
 
-    static int mock_error_string(int param0, char *param1, int *param2)
+    int mock_error_string(int param0, char *param1, int *param2)
     {
         *param2 = 0;
         return 0;
@@ -87,7 +87,7 @@ extern "C"
 
     #define MPI_Error_string(p0, p1, p2) mock_error_string(p0, p1, p2)
 
-    static int mock_comm_dup(MPI_Comm param0, MPI_Comm *param1)
+    int mock_comm_dup(MPI_Comm param0, MPI_Comm *param1)
     {
         if (g_params.size() < 2) return 0;  //comm free test does not properly set these up
         memcpy(g_params[0], &param0, g_sizes[0]);
@@ -98,7 +98,7 @@ extern "C"
     #define MPI_Comm_dup(p0, p1) mock_comm_dup(p0, p1)
     #define PMPI_Comm_dup(p0, p1) mock_comm_dup(p0, p1)
 
-    static int mock_cart_create(MPI_Comm param0, int param1, const int param2[], const int param3[], int param4,
+    int mock_cart_create(MPI_Comm param0, int param1, const int param2[], const int param3[], int param4,
             MPI_Comm *param5)
     {
         if (g_params.size() < 6) return 0;          //cart rank and coord tests do not properly set up these params
@@ -115,7 +115,7 @@ extern "C"
     #define MPI_Cart_create(p0, p1, p2, p3, p4, p5) mock_cart_create(p0, p1, p2, p3, p4, p5)
     #define PMPI_Cart_create(p0, p1, p2, p3, p4, p5) mock_cart_create(p0, p1, p2, p3, p4, p5)
 
-    static int mock_cart_rank(MPI_Comm param0, int param1[], int *param2)
+    int mock_cart_rank(MPI_Comm param0, int param1[], int *param2)
     {
         memcpy(g_params[0], &param0, g_sizes[0]);
         memcpy(g_params[1], param1, g_sizes[1]);
@@ -126,7 +126,7 @@ extern "C"
     #define MPI_Cart_rank(p0, p1, p2) mock_cart_rank(p0, p1, p2)
     #define PMPI_Cart_rank(p0, p1, p2) mock_cart_rank(p0, p1, p2)
 
-    static int mock_dims_create(int param0, int param1, int param2[])
+    int mock_dims_create(int param0, int param1, int param2[])
     {
         memcpy(g_params[0], &param0, g_sizes[0]);
         memcpy(g_params[1], &param1, g_sizes[1]);
@@ -137,7 +137,7 @@ extern "C"
     #define MPI_Dims_create(p0, p1, p2) mock_dims_create(p0, p1, p2)
     #define PMPI_Dims_create(p0, p1, p2) mock_dims_create(p0, p1, p2)
 
-    static int mock_alloc_mem(MPI_Aint param0, MPI_Info param1, void **param2)
+    int mock_alloc_mem(MPI_Aint param0, MPI_Info param1, void **param2)
     {
         memcpy(g_params[0], &param0, g_sizes[0]);
         memcpy(g_params[1], &param1, g_sizes[1]);
@@ -148,7 +148,7 @@ extern "C"
     #define MPI_Alloc_mem(p0, p1, p2) mock_alloc_mem(p0, p1, p2)
     #define PMPI_Alloc_mem(p0, p1, p2) mock_alloc_mem(p0, p1, p2)
 
-    static int mock_free_mem(void *param0)
+    int mock_free_mem(void *param0)
     {
         size_t tmp0 = (size_t) param0;
         memcpy(g_params[0], &tmp0, g_sizes[0]);
@@ -158,7 +158,7 @@ extern "C"
     #define MPI_Free_mem(p0) mock_free_mem(p0)
     #define PMPI_Free_mem(p0) mock_free_mem(p0)
 
-    static int mock_cart_coords(MPI_Comm param0, int param1, int param2, int param3[])
+    int mock_cart_coords(MPI_Comm param0, int param1, int param2, int param3[])
     {
         memcpy(g_params[0], &param0, g_sizes[0]);
         memcpy(g_params[1], &param1, g_sizes[1]);
@@ -171,7 +171,7 @@ extern "C"
     #define MPI_Cart_coords(p0, p1, p2, p3) mock_cart_coords(p0, p1, p2, p3)
     #define PMPI_Cart_coords(p0, p1, p2, p3) mock_cart_coords(p0, p1, p2, p3)
 
-    static int mock_reduce(void *param0, void *param1, int param2, MPI_Datatype param3, MPI_Op param4, int param5, MPI_Comm param6)
+    int mock_reduce(void *param0, void *param1, int param2, MPI_Datatype param3, MPI_Op param4, int param5, MPI_Comm param6)
     {
         size_t tmp0 = (size_t) param0;
         memcpy(g_params[0], &tmp0, g_sizes[0]);
@@ -188,7 +188,7 @@ extern "C"
     #define MPI_Reduce(p0, p1, p2, p3, p4, p5, p6) mock_reduce(p0, p1, p2, p3, p4, p5, p6)
     #define PMPI_Reduce(p0, p1, p2, p3, p4, p5, p6) mock_reduce(p0, p1, p2, p3, p4, p5, p6)
 
-    static int mock_allreduce(const void *param0, void *param1, int param2, MPI_Datatype param3, MPI_Op param4, MPI_Comm param5)
+    int mock_allreduce(const void *param0, void *param1, int param2, MPI_Datatype param3, MPI_Op param4, MPI_Comm param5)
     {
         // all other params are stack vars beneath exposed API
         memcpy(g_params[0], param0, g_sizes[0]);
@@ -199,7 +199,7 @@ extern "C"
     #define MPI_Allreduce(p0, p1, p2, p3, p4, p5) mock_allreduce(p0, p1, p2, p3, p4, p5)
     #define PMPI_Allreduce(p0, p1, p2, p3, p4, p5) mock_allreduce(p0, p1, p2, p3, p4, p5)
 
-    static int mock_gather(const void *param0, int param1, MPI_Datatype param2, void *param3, int param4, MPI_Datatype param5, int param6, MPI_Comm param7)
+    int mock_gather(const void *param0, int param1, MPI_Datatype param2, void *param3, int param4, MPI_Datatype param5, int param6, MPI_Comm param7)
     {
         size_t tmp0 = (size_t) param0;
         memcpy(g_params[0], &tmp0, g_sizes[0]);
@@ -217,7 +217,7 @@ extern "C"
     #define MPI_Gather(p0, p1, p2, p3, p4, p5, p6, p7) mock_gather(p0, p1, p2, p3, p4, p5, p6, p7)
     #define PMPI_Gather(p0, p1, p2, p3, p4, p5, p6, p7) mock_gather(p0, p1, p2, p3, p4, p5, p6, p7)
 
-    static int mock_gatherv(const void *param0, int param1, MPI_Datatype param2, void *param3, const int *param4, const int *param5, MPI_Datatype param6, int param7, MPI_Comm param8)
+    int mock_gatherv(const void *param0, int param1, MPI_Datatype param2, void *param3, const int *param4, const int *param5, MPI_Datatype param6, int param7, MPI_Comm param8)
     {
         size_t tmp0 = (size_t) param0;
         memcpy(g_params[0], &tmp0, g_sizes[0]);
@@ -236,7 +236,7 @@ extern "C"
     #define MPI_Gatherv(p0, p1, p2, p3, p4, p5, p6, p7, p8) mock_gatherv(p0, p1, p2, p3, p4, p5, p6, p7, p8)
     #define PMPI_Gatherv(p0, p1, p2, p3, p4, p5, p6, p7, p8) mock_gatherv(p0, p1, p2, p3, p4, p5, p6, p7, p8)
 
-    static int mock_win_create(void *param0, MPI_Aint param1, int param2, MPI_Info param3, MPI_Comm param4, MPI_Win *param5)
+    int mock_win_create(void *param0, MPI_Aint param1, int param2, MPI_Info param3, MPI_Comm param4, MPI_Win *param5)
     {
         size_t tmp0 = (size_t) param0;
         memcpy(g_params[0], &tmp0, g_sizes[0]);
@@ -252,7 +252,7 @@ extern "C"
     #define MPI_Win_create(p0, p1, p2, p3, p4, p5) mock_win_create(p0, p1, p2, p3, p4, p5)
     #define PMPI_Win_create(p0, p1, p2, p3, p4, p5) mock_win_create(p0, p1, p2, p3, p4, p5)
 
-    static int mock_win_free(MPI_Win *param0)
+    int mock_win_free(MPI_Win *param0)
     {
         size_t tmp0 = (size_t) param0;
         memcpy(g_params[0], &tmp0, g_sizes[0]);
@@ -262,7 +262,7 @@ extern "C"
     #define MPI_Win_free(p0) mock_win_free(p0)
     #define PMPI_Win_free(p0) mock_win_free(p0)
 
-    static int mock_win_lock(int param0, int param1, int param2, MPI_Win param3)
+    int mock_win_lock(int param0, int param1, int param2, MPI_Win param3)
     {
         memcpy(g_params[0], &param0, g_sizes[0]);
         memcpy(g_params[1], &param1, g_sizes[1]);
@@ -274,7 +274,7 @@ extern "C"
     #define MPI_Win_lock(p0, p1, p2, p3) mock_win_lock(p0, p1, p2, p3)
     #define PMPI_Win_lock(p0, p1, p2, p3) mock_win_lock(p0, p1, p2, p3)
 
-    static int mock_win_unlock(int param0, MPI_Win param1)
+    int mock_win_unlock(int param0, MPI_Win param1)
     {
         memcpy(g_params[0], &param0, g_sizes[0]);
         memcpy(g_params[1], &param1, g_sizes[1]);
@@ -284,7 +284,7 @@ extern "C"
     #define MPI_Win_unlock(p0, p1) mock_win_unlock(p0, p1)
     #define PMPI_Win_unlock(p0, p1) mock_win_unlock(p0, p1)
 
-    static int mock_put(const void *param0, int param1, MPI_Datatype param2, int param3, MPI_Aint param4,
+    int mock_put(const void *param0, int param1, MPI_Datatype param2, int param3, MPI_Aint param4,
             int param5, MPI_Datatype param6, MPI_Win param7)
     {
         size_t tmp0 = (size_t) param0;
@@ -302,7 +302,7 @@ extern "C"
     #define MPI_Put(p0, p1, p2, p3, p4, p5, p6, p7) mock_put(p0, p1, p2, p3, p4, p5, p6, p7)
     #define PMPI_Put(p0, p1, p2, p3, p4, p5, p6, p7) mock_put(p0, p1, p2, p3, p4, p5, p6, p7)
 
-    static int mock_rank(MPI_Comm param0, int *param1)
+    int mock_rank(MPI_Comm param0, int *param1)
     {
         memcpy(g_params[0], &param0, g_sizes[0]);
         memcpy(g_params[1], param1, g_sizes[1]);
@@ -312,7 +312,7 @@ extern "C"
     #define MPI_Comm_rank(p0, p1) mock_rank(p0, p1)
     #define PMPI_Comm_rank(p0, p1) mock_rank(p0, p1)
 
-    static int mock_free(MPI_Comm *param0)
+    int mock_free(MPI_Comm *param0)
     {
         size_t tmp0 = (size_t) param0;
         memcpy(g_params[0], &tmp0, g_sizes[0]);
@@ -322,7 +322,7 @@ extern "C"
     #define MPI_Comm_free(p0) mock_free(p0)
     #define PMPI_Comm_free(p0) mock_free(p0)
 
-    static int mock_barrier(MPI_Comm param0)
+    int mock_barrier(MPI_Comm param0)
     {
         memcpy(g_params[0], &param0, g_sizes[0]);
         return 0;
@@ -331,7 +331,7 @@ extern "C"
     #define MPI_Barrier(p0) mock_barrier(p0)
     #define PMPI_Barrier(p0) mock_barrier(p0)
 
-    static int mock_comm_split(MPI_Comm param0, int param1, int param2, MPI_Comm *param3)
+    int mock_comm_split(MPI_Comm param0, int param1, int param2, MPI_Comm *param3)
     {
         memcpy(g_params[0], &param0, g_sizes[0]);
         memcpy(g_params[1], &param1, g_sizes[1]);
@@ -344,7 +344,7 @@ extern "C"
     #define MPI_Comm_split(p0, p1, p2, p3) mock_comm_split(p0, p1, p2, p3)
     #define PMPI_Comm_split(p0, p1, p2, p3) mock_comm_split(p0, p1, p2, p3)
 
-    static int mock_comm_size(MPI_Comm param0, int *param1)
+    int mock_comm_size(MPI_Comm param0, int *param1)
     {
         return 0;
     }
@@ -352,7 +352,7 @@ extern "C"
     #define MPI_Comm_size(p0, p1) mock_comm_size(p0, p1)
     #define PMPI_Comm_size(p0, p1) mock_comm_size(p0, p1)
 
-    static int mock_bcast(void *param0, int param1, MPI_Datatype param2, int param3, MPI_Comm param4)
+    int mock_bcast(void *param0, int param1, MPI_Datatype param2, int param3, MPI_Comm param4)
     {
         memcpy(g_params[0], param0, g_sizes[0]);
         memcpy(g_params[1], &param1, g_sizes[1]);
@@ -361,6 +361,7 @@ extern "C"
         memcpy(g_params[4], &param4, g_sizes[4]);
         return 0;
     }
+
 
     #define MPI_Bcast(p0, p1, p2, p3, p4) mock_bcast(p0, p1, p2, p3, p4)
     #define PMPI_Bcast(p0, p1, p2, p3, p4) mock_bcast(p0, p1, p2, p3, p4)
@@ -530,7 +531,7 @@ TEST_F(CommMPIImpTest, mpi_reduce)
     m_params.push_back(&root);
     m_params.push_back(tmp_comm.get_comm_ref());
 
-    tmp_comm.reduce_max((double *) send, (double *) recv, count, root);
+    tmp_comm.reduce_sum((double *) send, (double *) recv, count, root);
 
     check_params();
 }
@@ -558,13 +559,13 @@ TEST_F(CommMPIImpTest, mpi_gather)
     MPICommTestHelper tmp_comm;
     void *send = NULL;
     void *recv = NULL;
-    int count = 1;
-    MPI_Datatype dt = MPI_BYTE; // used beneath API
+    size_t count = 1;
+    MPI_Datatype dt = MPI_INT; // used beneath API
     int root = 0;
 
     g_sizes.push_back(sizeof(size_t));
     g_params.push_back(malloc(g_sizes[0]));
-    g_sizes.push_back(sizeof(int));
+    g_sizes.push_back(sizeof(size_t));
     g_params.push_back(malloc(g_sizes[1]));
     g_sizes.push_back(sizeof(MPI_Datatype));
     g_params.push_back(malloc(g_sizes[2]));
@@ -844,7 +845,7 @@ TEST_F(CommMPIImpTest, mpi_win_ops)
     size_t input_size = sizeof(input);
     MPI_Info info = MPI_INFO_NULL; // used beneath API
     MPI_Aint disp = 1; // used beneath API
-    size_t win_handle = tmp_comm.window_create(input_size, &input);
+    size_t win_handle = tmp_comm.create_window(input_size, &input);
 
     m_params.push_back(&tmp);
     m_params.push_back(&input_size);
@@ -871,7 +872,7 @@ TEST_F(CommMPIImpTest, mpi_win_ops)
             g_sizes.push_back(sizeof(MPI_Win));
             g_params.push_back(malloc(g_sizes[3]));
 
-            tmp_comm.window_lock(win_handle, exclusive, rank, assert);
+            tmp_comm.lock_window(win_handle, exclusive, rank, assert);
 
             ex = exclusive ? MPI_LOCK_EXCLUSIVE : MPI_LOCK_SHARED;
             m_params.push_back(&ex);
@@ -928,7 +929,7 @@ TEST_F(CommMPIImpTest, mpi_win_ops)
     m_params.push_back(&rank);
     m_params.push_back((void *) tmp2);
 
-    tmp_comm.window_unlock(win_handle, rank);
+    tmp_comm.unlock_window(win_handle, rank);
 
     check_params();
     reset();
@@ -940,7 +941,7 @@ TEST_F(CommMPIImpTest, mpi_win_ops)
 
     m_params.push_back(&tmp2);
 
-    tmp_comm.window_destroy(win_handle);
+    tmp_comm.destroy_window(win_handle);
 
     check_params(); }
 }

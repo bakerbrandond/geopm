@@ -182,7 +182,7 @@ namespace geopm
             virtual ~CommWindow();
             void lock(bool isExclusive, int rank, int assert);
             void unlock(int rank);
-            void put(const void *send_buf, size_t send_size, int rank, off_t disp);
+            void put(const void *send_buf, size_t send_size, int rank, int disp);
 #ifndef GEOPM_TEST
         protected:
 #endif
@@ -299,6 +299,28 @@ namespace geopm
 
     }
 
+    MPIComm::MPIComm(const MPIComm *in_comm, int split_type, int key, bool &is_ctl)
+        : m_comm(MPI_COMM_NULL)
+        , m_maxdims(1)
+        , m_description(in_comm->m_description)
+    {
+        switch (split_type) {
+            case M_COMM_SPLIT_TYPE_CTL:
+                throw Exception("got split type ctl, remove this if exception not seen", GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
+                break;
+            case M_COMM_SPLIT_TYPE_PPN1:
+                throw Exception("got split type ppn1, not doing anything", GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
+                break;
+            case M_COMM_SPLIT_TYPE_SHARED:
+                throw Exception("got split type shared, not doing anything", GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
+                break;
+            default:
+                std::ostringstream ex_str;
+                ex_str << "Invalid split_type.";
+                throw Exception(ex_str.str(), GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
+        }
+    }
+
     MPIComm::~MPIComm()
     {
         for (auto it = m_windows.begin(); it != m_windows.end(); ++it) {
@@ -316,7 +338,7 @@ namespace geopm
 
     int MPIComm::cart_rank(std::vector<int> coords) const
     {
-        int rank = 0;
+        int rank;
         check_mpi(PMPI_Cart_rank(m_comm, coords.data(), &rank));
         return rank;
     }
@@ -366,27 +388,27 @@ namespace geopm
         check_mpi(PMPI_Free_mem(base));
     }
 
-    size_t MPIComm::window_create(size_t size, void *base)
+    size_t MPIComm::create_window(size_t size, void *base)
     {
         CommWindow *win_handle = new CommWindow(m_comm, base, size);
         m_windows.insert((size_t) win_handle);
         return (size_t ) win_handle;
     }
 
-    void MPIComm::window_destroy(size_t win_handle)
+    void MPIComm::destroy_window(size_t win_handle)
     {
         check_window(win_handle);
         m_windows.erase(win_handle);
         delete (CommWindow *) win_handle;
     }
 
-    void MPIComm::window_lock(size_t window_id, bool isExclusive, int rank, int assert) const
+    void MPIComm::lock_window(size_t window_id, bool isExclusive, int rank, int assert) const
     {
         check_window(window_id);
         ((CommWindow *) window_id)->lock(isExclusive, rank, assert);
     }
 
-    void MPIComm::window_unlock(size_t window_id, int rank) const
+    void MPIComm::unlock_window(size_t window_id, int rank) const
     {
         check_window(window_id);
         ((CommWindow *) window_id)->unlock(rank);
@@ -420,7 +442,7 @@ namespace geopm
     }
 
 
-    void MPIComm::reduce_max(double *sendbuf, double *recvbuf, size_t count, int root) const
+    void MPIComm::reduce_sum(double *sendbuf, double *recvbuf, size_t count, int root) const
     {
         if (is_valid()) {
             check_mpi(PMPI_Reduce(sendbuf, recvbuf, count, MPI_DOUBLE, MPI_MAX, root, m_comm));
@@ -429,27 +451,25 @@ namespace geopm
 
     bool MPIComm::test(bool is_true) const
     {
-        int is_all_true = 0;
-        int tmp_is_true = (int) is_true;
+        bool is_all_true = false;
         if (is_valid()) {
-            check_mpi(PMPI_Allreduce(&tmp_is_true, &is_all_true, 1, MPI_INT, MPI_LAND, m_comm));
+            check_mpi(PMPI_Allreduce(&is_true, &is_all_true, 1, MPI_INT, MPI_LAND, m_comm));
         }
-        return (bool) is_all_true;
+        return is_all_true;
     }
 
     void MPIComm::gather(const void *send_buf, size_t send_size, void *recv_buf,
             size_t recv_size, int root) const
     {
         if (is_valid()) {
-            check_mpi(PMPI_Gather(GEOPM_MPI_CONST_CAST(void *)(send_buf), send_size, MPI_BYTE, recv_buf, recv_size, MPI_BYTE, root, m_comm));
+            check_mpi(PMPI_Gather(GEOPM_MPI_CONST_CAST(void *)(send_buf), send_size, MPI_INT, recv_buf, recv_size, MPI_INT, root, m_comm));
         }
     }
 
     void MPIComm::gatherv(const void *send_buf, size_t send_size, void *recv_buf,
-                    const std::vector<size_t> &recv_sizes, const std::vector<off_t> &rank_offset, int root) const
+                    const std::vector<size_t> &recv_sizes, const std::vector<off_t> rank_offset, int root) const
     {
-        std::vector<int> sizes(recv_sizes.size(), 0);
-        std::vector<int> offsets(rank_offset.size(), 0);
+        std::vector<int> sizes(recv_sizes.size(), 0), offsets(rank_offset.size(), 0);
         auto in_size_it = recv_sizes.begin();
         auto out_size_it = sizes.begin();
         auto in_off_it = rank_offset.begin();
@@ -468,7 +488,7 @@ namespace geopm
         }
     }
 
-    void MPIComm::window_put(const void *send_buf, size_t send_size, int rank, off_t disp, size_t window_id) const
+    void MPIComm::window_put(const void *send_buf, size_t send_size, int rank, int disp, size_t window_id) const
     {
         check_window(window_id);
         ((CommWindow *) window_id)->put(send_buf, send_size, rank, disp);
@@ -494,7 +514,7 @@ namespace geopm
         check_mpi(PMPI_Win_unlock(rank, m_window));
     }
 
-    void CommWindow::put(const void *send_buf, size_t send_size, int rank, off_t disp)
+    void CommWindow::put(const void *send_buf, size_t send_size, int rank, int disp)
     {
         check_mpi(PMPI_Put(GEOPM_MPI_CONST_CAST(void *)(send_buf), send_size, MPI_BYTE, rank, disp,
                     send_size, MPI_BYTE, m_window));

@@ -1036,7 +1036,7 @@ namespace geopm
         buffer_size_array.resize(num_ranks);
         buffer_displacement.resize(num_ranks);
 
-        m_ppn1_comm->gather(&buffer_size, sizeof(size_t), buffer_size_array.data(), sizeof(size_t), 0);
+        m_ppn1_comm->gather(&buffer_size, 1, buffer_size_array.data(), 1, 0);
 
         if (!m_ppn1_rank) {
             size_t full_report_size = std::accumulate(buffer_size_array.begin(), buffer_size_array.end(), 0) + 1;
@@ -1047,7 +1047,7 @@ namespace geopm
             }
         }
 
-        m_ppn1_comm->gatherv((void *) (report.str().data()), sizeof(char) * buffer_size,
+        m_ppn1_comm->gatherv((void *) (report.str().data()), buffer_size,
                 (void *) report_buffer.data(), buffer_size_array, buffer_displacement, 0);
 
         if (!m_ppn1_rank) {

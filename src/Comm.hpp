@@ -49,7 +49,7 @@ namespace geopm
                 M_COMM_SPLIT_TYPE_CTL,
                 M_COMM_SPLIT_TYPE_PPN1,
                 M_COMM_SPLIT_TYPE_SHARED,
-                M_NUM_COMM_SPLIT_TYPE
+                M_COMM_SPLIT_TYPE_MAX
             };
 
             enum m_split_color_e {
@@ -77,10 +77,10 @@ namespace geopm
             /// @brief Allocate memory for message passing and RMA
             virtual void free_mem(void *base) = 0;
             virtual void alloc_mem(size_t size, void **base) = 0;
-            virtual size_t window_create(size_t size, void *base) = 0;
-            virtual void window_destroy(size_t window_id) = 0;
-            virtual void window_lock(size_t window_id, bool isExclusive, int rank, int assert) const = 0;
-            virtual void window_unlock(size_t window_id, int rank) const = 0;
+            virtual size_t create_window(size_t size, void *base) = 0;
+            virtual void destroy_window(size_t window_id) = 0;
+            virtual void lock_window(size_t window_id, bool isExclusive, int rank, int assert) const = 0;
+            virtual void unlock_window(size_t window_id, int rank) const = 0;
             /// @brief Coordinate in Cartesian grid for specified rank
             virtual void coordinate(int rank, std::vector<int> &coord) const = 0;
 
@@ -90,13 +90,13 @@ namespace geopm
             /// @brief Broadcast a message to all ranks
             virtual void broadcast(void *buffer, size_t size, int root) const = 0;
             virtual bool test(bool is_true) const = 0;
-            virtual void reduce_max(double *sendbuf, double *recvbuf, size_t count, int root) const = 0;
+            virtual void reduce_sum(double *sendbuf, double *recvbuf, size_t count, int root) const = 0;
             /// @brief Reduce distributed messages across all ranks using specified operation, store result on all ranks
             virtual void gather(const void *send_buf, size_t send_size, void *recv_buf,
                     size_t recv_size, int root) const = 0;
             virtual void gatherv(const void *send_buf, size_t send_size, void *recv_buf,
-                    const std::vector<size_t> &recv_sizes, const std::vector<off_t> &rank_offset, int root) const = 0;
-            virtual void window_put(const void *send_buf, size_t send_size, int rank, off_t disp, size_t window_id) const = 0;
+                    const std::vector<size_t> &recv_sizes, const std::vector<off_t> rank_offset, int root) const = 0;
+            virtual void window_put(const void *send_buf, size_t send_size, int rank, int disp, size_t window_id) const = 0;
     };
 
     IComm* geopm_get_comm(const std::string &description);

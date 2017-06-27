@@ -127,7 +127,7 @@ namespace geopm
         /* Tracks if the rank's coordinate is zero for higher order
            dimensions than the depth */
         bool is_all_zero = true;
-        IComm *level_comm = NULL;
+        IComm *level_comm;
         m_num_level = 0;
         int level = 0;
         int depth = num_level - 1;
@@ -321,12 +321,12 @@ namespace geopm
     {
         m_comm->barrier();
         // Destroy sample window
-        m_comm->window_destroy(m_sample_window);
+        m_comm->destroy_window(m_sample_window);
         if (m_sample_mailbox) {
             m_comm->free_mem(m_sample_mailbox);
         }
         // Destroy policy window
-        m_comm->window_destroy(m_policy_window);
+        m_comm->destroy_window(m_policy_window);
         // Destroy the comm
         delete m_comm;
     }
@@ -343,30 +343,30 @@ namespace geopm
         }
 
         bool is_complete = true;
-        m_comm->window_lock(m_sample_window, false, 0, 0);
+        m_comm->lock_window(m_sample_window, false, 0, 0);
         for (int i = 0; is_complete && i < m_size; ++i) {
             if (m_sample_mailbox[i].region_id == 0) {
                 is_complete = false;
             }
         }
-        m_comm->window_unlock(m_sample_window, 0);
+        m_comm->unlock_window(m_sample_window, 0);
 
         if (!is_complete) {
             throw Exception(__func__, GEOPM_ERROR_SAMPLE_INCOMPLETE, __FILE__, __LINE__);
         }
 
-        m_comm->window_lock(m_sample_window, true, 0, 0);
+        m_comm->lock_window(m_sample_window, true, 0, 0);
         std::copy(m_sample_mailbox, m_sample_mailbox + m_size, sample.begin());
         std::fill(m_sample_mailbox, m_sample_mailbox + m_size, GEOPM_SAMPLE_INVALID);
-        m_comm->window_unlock(m_sample_window, 0);
+        m_comm->unlock_window(m_sample_window, 0);
     }
 
     void TreeCommunicatorLevel::get_policy(struct geopm_policy_message_s &policy)
     {
         if (m_rank) {
-            m_comm->window_lock(m_policy_window, false, m_rank, 0);
+            m_comm->lock_window(m_policy_window, false, m_rank, 0);
             policy = *((struct geopm_policy_message_s*)(&m_policy_mailbox));
-            m_comm->window_unlock(m_policy_window, m_rank);
+            m_comm->unlock_window(m_policy_window, m_rank);
         }
         else {
             policy = *((struct geopm_policy_message_s *)(&m_policy_mailbox));
@@ -382,9 +382,9 @@ namespace geopm
     {
         size_t msg_size = sizeof(struct geopm_sample_message_s);
         if (m_rank) {
-            m_comm->window_lock(m_sample_window, true, 0, 0);
+            m_comm->lock_window(m_sample_window, true, 0, 0);
             m_comm->window_put((void *) &sample, msg_size, 0, m_rank * msg_size, m_sample_window);
-            m_comm->window_unlock(m_sample_window, 0);
+            m_comm->unlock_window(m_sample_window, 0);
             m_overhead_send += msg_size;
         }
         else {
@@ -408,9 +408,9 @@ namespace geopm
              last_it != m_last_policy.end();
              ++this_it, ++last_it, ++child_rank) {
             if (!geopm_is_policy_equal(&(*this_it), &(*last_it))) {
-                m_comm->window_lock(m_policy_window, true, child_rank, 0);
+                m_comm->lock_window(m_policy_window, true, child_rank, 0);
                 m_comm->window_put((void *)&(*this_it), msg_size, child_rank, 0, m_policy_window);
-                m_comm->window_unlock(m_policy_window, child_rank);
+                m_comm->unlock_window(m_policy_window, child_rank);
                 m_overhead_send += msg_size;
                 *last_it = *this_it;
             }
@@ -432,20 +432,20 @@ namespace geopm
         // Create policy window
         size_t msg_size = sizeof(struct geopm_policy_message_s);
         if (m_rank) {
-            m_policy_window = m_comm->window_create(msg_size, (void *)(&m_policy_mailbox));
+            m_policy_window = m_comm->create_window(msg_size, (void *)(&m_policy_mailbox));
         }
         else {
-            m_policy_window = m_comm->window_create(0, NULL);
+            m_policy_window = m_comm->create_window(0, NULL);
         }
         // Create sample window
         if (!m_rank) {
             msg_size = sizeof(struct geopm_sample_message_s);
             m_comm->alloc_mem(m_size * msg_size, (void **)(&m_sample_mailbox));
-            m_sample_window = m_comm->window_create(m_size * msg_size, (void *)(m_sample_mailbox));
+            m_sample_window = m_comm->create_window(m_size * msg_size, (void *)(m_sample_mailbox));
             std::fill(m_sample_mailbox, m_sample_mailbox + m_size, GEOPM_SAMPLE_INVALID);
         }
         else {
-            m_sample_window = m_comm->window_create(0, NULL);
+            m_sample_window = m_comm->create_window(0, NULL);
         }
     }
 

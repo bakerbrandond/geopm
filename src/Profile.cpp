@@ -694,7 +694,7 @@ namespace geopm
                                      m_overhead_time_shutdown};
         double max_overhead[3] = {};
         IComm *tmp_comm = geopm_get_comm(geopm::MPICOMM_DESCRIPTION);
-        tmp_comm->reduce_max(overhead_buffer, max_overhead, 3, 0);
+        tmp_comm->reduce_sum(overhead_buffer, max_overhead, 3, 0);
         if (!m_rank) {
             std::cout << "GEOPM startup (seconds):  " << max_overhead[0] << std::endl;
             std::cout << "GEOPM runtime (seconds):  " << max_overhead[1] << std::endl;

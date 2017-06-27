@@ -42,13 +42,8 @@ typedef int MPI_Comm;
 #ifdef __cplusplus
 extern "C" {
 #endif
-/*****************/
-/* MPI COMM APIS */
-/*****************/
 int geopm_comm_split_ppn1(MPI_Comm comm, const char *tag, MPI_Comm *ppn1_comm);
-
 int geopm_comm_split_shared(MPI_Comm comm, const char *tag, MPI_Comm *split_comm);
-
 int geopm_comm_split(MPI_Comm comm, const char *tag, MPI_Comm *split_comm, int *is_ctl_comm);
 #ifdef __cplusplus
 }
