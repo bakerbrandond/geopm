@@ -59,6 +59,8 @@
 #include "OMPT.hpp"
 #include "config.h"
 #include "Comm.hpp"
+// TODO env var
+const char *geopm::MPICOMM_DESCRIPTION = "MPIComm";
 #include "geopm_ctl.h"
 
 #ifdef GEOPM_HAS_XMMINTRIN

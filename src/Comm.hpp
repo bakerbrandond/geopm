@@ -40,7 +40,6 @@
 
 namespace geopm
 {
-    extern const char *MPICOMM_DESCRIPTION;
     /// @brief Abstract base class for interprocess communication in geopm
     class IComm
     {
@@ -99,6 +98,8 @@ namespace geopm
             virtual void window_put(const void *send_buf, size_t send_size, int rank, int disp, size_t window_id) const = 0;
     };
 
+    // User must not delete the returned instance from this call,
+    // but all IComms created from this instance must be memory managed by
     IComm* geopm_get_comm(const std::string &description);
     IComm* geopm_get_comm(const IComm *in_comm);
     IComm* geopm_get_comm(const IComm *in_comm, int color, int key);

@@ -30,7 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <mpi.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/mman.h>
@@ -39,12 +38,13 @@
 
 
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
 #include "TreeCommunicator.hpp"
 #include "Controller.hpp"
 #include "GlobalPolicy.hpp"
 #include "geopm_policy.h"
 #include "Exception.hpp"
-#include "MPIComm.hpp"
+#include "MockComm.hpp"
 
 #ifndef NAME_MAX
 #define NAME_MAX 256
@@ -71,7 +71,8 @@ MPITreeCommunicatorTest::MPITreeCommunicatorTest()
     std::vector<int> factor(2);
     factor[0] = 2;
     factor[1] = 8;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    geopm::IComm *tmp_comm = new MockComm();
+    rank = tmp_comm->rank();
     if (!rank) {
         m_polctl = new geopm::GlobalPolicy("", m_ctl_path);
         m_polctl->mode(GEOPM_POLICY_MODE_FREQ_UNIFORM_STATIC);
@@ -79,11 +80,9 @@ MPITreeCommunicatorTest::MPITreeCommunicatorTest()
         m_polctl->write();
     }
 
-    geopm::IComm *tmp_comm = new geopm::MPIComm();
     m_tcomm = new geopm::TreeCommunicator(factor, m_polctl, tmp_comm);
     delete tmp_comm;
 }
-
 
 MPITreeCommunicatorTest::~MPITreeCommunicatorTest()
 {
