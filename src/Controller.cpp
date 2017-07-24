@@ -81,7 +81,6 @@ extern "C"
         return (void *)err;
     }
 
-
     int geopmctl_main(const char *policy_config)
     {
         int err = 0;
@@ -89,19 +88,19 @@ extern "C"
             if (policy_config) {
                 std::string policy_config_str(policy_config);
                 geopm::IGlobalPolicy *policy = new geopm::GlobalPolicy(policy_config_str, "");
-                geopm::IComm *tmp_comm = geopm::geopm_get_comm(geopm::MPICOMM_DESCRIPTION);
+                // TODO env var
+                const geopm::IComm *tmp_comm = geopm::geopm_get_comm("MPIComm");
                 geopm::Controller ctl(policy, tmp_comm);
                 err = geopm_ctl_run((struct geopm_ctl_c *)&ctl);
                 delete policy;
-                delete tmp_comm;
             }
             //The null case is for all nodes except rank 0.
             //These controllers should assume their policy from the master.
             else {
-                geopm::IComm *tmp_comm = geopm::geopm_get_comm(geopm::MPICOMM_DESCRIPTION);
+                // TODO env var
+                const geopm::IComm *tmp_comm = geopm::geopm_get_comm("MPIComm");
                 geopm::Controller ctl(NULL, tmp_comm);
                 err = geopm_ctl_run((struct geopm_ctl_c *)&ctl);
-                delete tmp_comm;
             }
         }
         catch (...) {
@@ -115,9 +114,9 @@ extern "C"
         int err = 0;
         try {
             geopm::IGlobalPolicy *global_policy = (geopm::IGlobalPolicy *)policy;
-            geopm::IComm *tmp_comm = geopm::geopm_get_comm(geopm::MPICOMM_DESCRIPTION);
+            // TODO env var
+            const geopm::IComm *tmp_comm = geopm::geopm_get_comm("MPIComm");
             *ctl = (struct geopm_ctl_c *)(new geopm::Controller(global_policy, tmp_comm));
-            delete tmp_comm;
         }
         catch (...) {
             err = geopm::exception_handler(std::current_exception());
@@ -191,7 +190,7 @@ extern "C"
 
 namespace geopm
 {
-    Controller::Controller(IGlobalPolicy *global_policy, IComm *comm)
+    Controller::Controller(IGlobalPolicy *global_policy, const IComm *comm)
         : m_is_node_root(false)
         , m_max_fanout(0)
         , m_global_policy(global_policy)
@@ -224,7 +223,7 @@ namespace geopm
     {
         int num_nodes = 0;
 
-        m_ppn1_comm = geopm_get_comm(comm, "ctl", IComm::M_COMM_SPLIT_TYPE_PPN1);
+        m_ppn1_comm = comm->split("ctl", IComm::M_COMM_SPLIT_TYPE_PPN1);
         // Only the root rank on each node will have a fully initialized controller
         if (m_ppn1_comm->num_rank()) {
             m_is_node_root = true;

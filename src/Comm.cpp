@@ -39,7 +39,6 @@
 #include "geopm_plugin.h"
 #include "Exception.hpp"
 #include "Comm.hpp"
-#include "MPIComm.hpp"
 #include "config.h"
 
 namespace geopm
@@ -53,41 +52,20 @@ namespace geopm
     {
         public:
             static const CommFactory* getInstance();
-            /// @brief DeciderFactory destructor, virtual.
+            /// @brief CommFactory destructor, virtual.
             virtual ~CommFactory();
-            IComm *get_comm(const std::string &description) const;
-            IComm *get_comm(const IComm *in_comm) const;
-            IComm *get_comm(const IComm *in_comm, int color, int key) const;
-            IComm *get_comm(const IComm *in_comm, const std::string &tag, int split_type) const;
-            IComm *get_comm(const IComm *in_comm, std::vector<int> dimensions, std::vector<int> periods, bool is_reorder) const;
+            virtual void register_comm_imp(const IComm *in_comm, void *dl_ptr);
+            virtual const IComm *get_comm(const std::string &description) const;
         protected:
             /// @brief CommFactory default constructor.
             CommFactory();
+            std::list<const IComm *> m_comm_imps;
+            std::list<void *> m_comm_dls;
     };
 
-    IComm* geopm_get_comm(const std::string &description)
+    const IComm* geopm_get_comm(const std::string &description)
     {
         return CommFactory::getInstance()->get_comm(description);
-    }
-
-    IComm* geopm_get_comm(const IComm *in_comm)
-    {
-        return CommFactory::getInstance()->get_comm(in_comm);
-    }
-
-    IComm* geopm_get_comm(const IComm *in_comm, int color, int key)
-    {
-        return CommFactory::getInstance()->get_comm(in_comm, color, key);
-    }
-
-    IComm* geopm_get_comm(const IComm *in_comm, const std::string &tag, int split_type)
-    {
-        return CommFactory::getInstance()->get_comm(in_comm, tag, split_type);
-    }
-
-    IComm* geopm_get_comm(const IComm *in_comm, std::vector<int> dimensions, std::vector<int> periods, bool is_reorder)
-    {
-        return geopm::CommFactory::getInstance()->get_comm(in_comm, dimensions, periods, is_reorder);
     }
 
     const CommFactory* CommFactory::getInstance()
@@ -98,89 +76,46 @@ namespace geopm
 
     CommFactory::CommFactory()
     {
+        geopm_plugin_load(GEOPM_PLUGIN_TYPE_COMM, (struct geopm_factory_c *)this);
     }
 
     CommFactory::~CommFactory()
     {
+        for (auto dl_ptr : m_comm_dls) {
+            dlclose(dl_ptr);
+        }
     }
 
-    IComm* CommFactory::get_comm(const std::string &description) const
+    void CommFactory::register_comm_imp(const IComm *in_comm, void *dl_ptr)
     {
-        IComm *result = NULL;
-        if (!description.compare(MPICOMM_DESCRIPTION)) {
-            result = new MPIComm();
+        m_comm_imps.push_back(in_comm);
+        if (dl_ptr) {
+            m_comm_dls.push_back(dl_ptr);
         }
-        if (!result) {
-            // If we get here, no acceptable comm was found
-            std::ostringstream ex_str;
-            ex_str << "Failure to instantiate Comm type: " << description;
-            throw Exception(ex_str.str(), GEOPM_ERROR_COMM_UNSUPPORTED, __FILE__, __LINE__);
-        }
-
-        return result;
     }
 
-    IComm *CommFactory::get_comm(const IComm *in_comm) const
+    const IComm* CommFactory::get_comm(const std::string &description) const
     {
-        IComm *result = NULL;
-        if (in_comm->comm_supported(MPICOMM_DESCRIPTION)) {
-            result = new MPIComm(static_cast<const MPIComm *>(in_comm));
+        for (auto imp : m_comm_imps) {
+            if (imp->comm_supported(description)) {
+                return imp;
+            }
         }
-        if (!result) {
-            // If we get here, no acceptable comm was found
-            std::ostringstream ex_str;
-            ex_str << "Failure to duplicate Comm";
-            throw Exception(ex_str.str(), GEOPM_ERROR_COMM_UNSUPPORTED, __FILE__, __LINE__);
-        }
+        // If we get here, no acceptable communication implementation was found
+        std::ostringstream ex_str;
+        ex_str << "Failure to instantiate Comm type: " << description;
+        throw Exception(ex_str.str(), GEOPM_ERROR_COMM_UNSUPPORTED, __FILE__, __LINE__);
 
-        return result;
-    }
-
-    IComm *CommFactory::get_comm(const IComm *in_comm, int color, int key) const
-    {
-        IComm *result = NULL;
-        if (in_comm->comm_supported(MPICOMM_DESCRIPTION)) {
-            result = new MPIComm(static_cast<const MPIComm *>(in_comm), color, key);
-        }
-        if (!result) {
-            // If we get here, no acceptable comm was found
-            std::ostringstream ex_str;
-            ex_str << "Failure to split Comm";
-            throw Exception(ex_str.str(), GEOPM_ERROR_COMM_UNSUPPORTED, __FILE__, __LINE__);
-        }
-
-        return result;
-    }
-
-    IComm *CommFactory::get_comm(const IComm *in_comm, const std::string &tag, int split_type) const
-    {
-        IComm *result = NULL;
-        if (in_comm->comm_supported(MPICOMM_DESCRIPTION)) {
-            result = new MPIComm(static_cast<const MPIComm *>(in_comm), tag, split_type);
-        }
-        if (!result) {
-            // If we get here, no acceptable comm was found
-            std::ostringstream ex_str;
-            ex_str << "Failure to tag split Comm";
-            throw Exception(ex_str.str(), GEOPM_ERROR_COMM_UNSUPPORTED, __FILE__, __LINE__);
-        }
-
-        return result;
-    }
-
-    IComm *CommFactory::get_comm(const IComm *in_comm, std::vector<int> dimensions, std::vector<int> periods, bool is_reorder) const
-    {
-        IComm *result = NULL;
-        if (in_comm->comm_supported(MPICOMM_DESCRIPTION)) {
-            result = new MPIComm(static_cast<const MPIComm *>(in_comm), dimensions, periods, is_reorder);
-        }
-        if (!result) {
-            // If we get here, no acceptable comm was found
-            std::ostringstream ex_str;
-            ex_str << "Failure to cart split Comm";
-            throw Exception(ex_str.str(), GEOPM_ERROR_COMM_UNSUPPORTED, __FILE__, __LINE__);
-        }
-
-        return result;
+        return NULL;
     }
 }
+
+void geopm_factory_register(struct geopm_factory_c *factory, const geopm::IComm *in_comm, void *dl_ptr)
+{
+    geopm::CommFactory *fact_obj = (geopm::CommFactory *)(factory);
+    if (fact_obj == NULL) {
+        throw geopm::Exception(GEOPM_ERROR_FACTORY_NULL, __FILE__, __LINE__);
+    }
+    fact_obj->register_comm_imp(in_comm, dl_ptr);
+}
+

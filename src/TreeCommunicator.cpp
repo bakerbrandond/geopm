@@ -119,7 +119,7 @@ namespace geopm
 
         m_num_node = comm->num_rank();
 
-        comm_cart = geopm_get_comm(comm, m_fan_out, flags, 1);
+        comm_cart = comm->split(m_fan_out, flags, 1);
         rank_cart = comm_cart->rank();
         comm_cart->coordinate(rank_cart, coords);
         parent_coords = coords;
@@ -144,7 +144,7 @@ namespace geopm
                 key = 0;
             }
 
-            level_comm = geopm_get_comm(comm_cart, color, key);
+            level_comm = comm_cart->split(color, key);
             if (level_comm->num_rank()) {
                 ++m_num_level;
                 // TreeCommunicatorLevel will call MPI_Comm_Free on
@@ -312,7 +312,7 @@ namespace geopm
         m_policy_mailbox.flags = other.m_policy_mailbox.flags;
         m_policy_mailbox.num_sample = other.m_policy_mailbox.num_sample;
         m_policy_mailbox.power_budget = other.m_policy_mailbox.power_budget;
-        m_comm = geopm_get_comm(other.m_comm);
+        m_comm = other.m_comm->split();
         create_window();
         std::copy(other.m_sample_mailbox, other.m_sample_mailbox + m_size, m_sample_mailbox);
     }

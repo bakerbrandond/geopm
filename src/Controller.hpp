@@ -44,6 +44,7 @@
 #include "Region.hpp"
 #include "GlobalPolicy.hpp"
 #include "Profile.hpp"
+#include "ProfileSampler.hpp"
 #include "Tracer.hpp"
 #include "geopm_time.h"
 #include "geopm_plugin.h"
@@ -97,7 +98,7 @@ namespace geopm
             ///
             /// @param [in] comm The MPI communicator that supports
             ///        the control messages.
-            Controller(IGlobalPolicy *global_policy, IComm *comm);
+            Controller(IGlobalPolicy *global_policy, const IComm *comm);
             /// @brief Controller destructor, virtual.
             virtual ~Controller();
             /// @brief Returns true if Controller is valid.

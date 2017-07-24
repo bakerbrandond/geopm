@@ -40,7 +40,6 @@
 
 namespace geopm
 {
-    extern const char *MPICOMM_DESCRIPTION;
     /// @brief Abstract base class for interprocess communication in geopm
     class IComm
     {
@@ -63,6 +62,10 @@ namespace geopm
             /// @brief Default destructor
             virtual ~IComm() {}
 
+            virtual IComm* split() const = 0;
+            virtual IComm* split(int color, int key) const = 0;
+            virtual IComm* split(const std::string &tag, int split_type) const = 0;
+            virtual IComm* split(std::vector<int> dimensions, std::vector<int> periods, bool is_reorder) const = 0;
             virtual bool comm_supported(const std::string &description) const = 0;
 
             // Introspection
@@ -99,11 +102,9 @@ namespace geopm
             virtual void window_put(const void *send_buf, size_t send_size, int rank, off_t disp, size_t window_id) const = 0;
     };
 
-    IComm* geopm_get_comm(const std::string &description);
-    IComm* geopm_get_comm(const IComm *in_comm);
-    IComm* geopm_get_comm(const IComm *in_comm, int color, int key);
-    IComm* geopm_get_comm(const IComm *in_comm, const std::string &tag, int split_type);
-    IComm* geopm_get_comm(const IComm *in_comm, std::vector<int> dimensions, std::vector<int> periods, bool is_reorder);
+    // User must not delete the returned instance from this call,
+    // but all IComms created from this instance must be memory managed by
+    const IComm* geopm_get_comm(const std::string &description);
 }
 
 #endif

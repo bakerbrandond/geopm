@@ -49,7 +49,7 @@
 #include "geopm_env.h"
 #include "Profile.hpp"
 #include "SharedMemory.hpp"
-#include "geopm_comm.h"
+#include "geopm_mpi_comm.h"
 
 class MPIProfileTest: public :: testing :: Test
 {

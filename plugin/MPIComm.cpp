@@ -31,147 +31,39 @@
  */
 
 #include <sstream>
-#include <sys/stat.h>
-#include <unistd.h>
+//#include <unistd.h>
 
 #include <iostream>
 #include <map>
 
+#include "geopm_plugin.h"
 #include "Comm.hpp"
 #include "MPIComm.hpp"
 #include "Exception.hpp"
 #include "SharedMemory.hpp"
 #include "geopm_env.h"
-#include "geopm_comm.h"
+#include "src/geopm_mpi_comm.h"
 #include "config.h"
 
 extern "C"
 {
-static int geopm_comm_split_imp(MPI_Comm comm, const char *tag, int *num_node, MPI_Comm *split_comm, int *is_ctl_comm);
-
-int geopm_comm_split_ppn1(MPI_Comm comm, const char *tag, MPI_Comm *ppn1_comm)
-{
-    int num_node = 0;
-    int is_shm_root = 0;
-    int err = geopm_comm_split_imp(comm, tag, &num_node, ppn1_comm, &is_shm_root);
-    if (!err && !is_shm_root) {
-        err = MPI_Comm_free(ppn1_comm);
-        *ppn1_comm = MPI_COMM_NULL;
-    }
-    return err;
-}
-
-int geopm_comm_split_shared(MPI_Comm comm, const char *tag, MPI_Comm *split_comm)
+int geopm_plugin_register(int plugin_type, struct geopm_factory_c *factory, void *dl_ptr)
 {
     int err = 0;
-    struct stat stat_struct;
-    try {
-        std::ostringstream shmem_key;
-        shmem_key << geopm_env_shmkey() << "-comm-split-" << tag;
-        std::ostringstream shmem_path;
-        shmem_path << "/dev/shm" << shmem_key.str();
-        geopm::SharedMemory *shmem = NULL;
-        geopm::SharedMemoryUser *shmem_user = NULL;
-        int rank, color = -1;
 
-        MPI_Comm_rank(comm, &rank);
-        // remove shared memory file if one already exists
-        (void)unlink(shmem_path.str().c_str());
-        MPI_Barrier(comm);
-        err = stat(shmem_path.str().c_str(), &stat_struct);
-        if (!err || (err && errno != ENOENT)) {
-            std::stringstream ex_str;
-            ex_str << "geopm_comm_split_shared(): " << shmem_key.str()
-                << " already exists and cannot be deleted.";
-            throw geopm::Exception(ex_str.str(), GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
+    try {
+        if (plugin_type == GEOPM_PLUGIN_TYPE_COMM) {
+            geopm_factory_register(factory, geopm::MPIComm::get_comm(), dl_ptr);
         }
-        MPI_Barrier(comm);
-        try {
-            shmem = new geopm::SharedMemory(shmem_key.str(), sizeof(int));
-        }
-        catch (geopm::Exception ex) {
-            if (ex.err_value() != EEXIST) {
-                throw ex;
-            }
-        }
-        if (!shmem) {
-            shmem_user = new geopm::SharedMemoryUser(shmem_key.str(), 1);
-        }
-        else {
-            color = rank;
-            *((int*)(shmem->pointer())) = color;
-        }
-        MPI_Barrier(comm);
-        if (shmem_user) {
-            color = *((int*)(shmem_user->pointer()));
-        }
-        err = MPI_Comm_split(comm, color, rank, split_comm);
-        delete shmem;
-        delete shmem_user;
     }
-    catch (...) {
+    catch(...) {
         err = geopm::exception_handler(std::current_exception());
     }
-    return err;
-}
 
-int geopm_comm_split(MPI_Comm comm, const char *tag, MPI_Comm *split_comm, int *is_ctl_comm)
-{
-    int num_node = 0;
-    return geopm_comm_split_imp(comm, tag, &num_node, split_comm, is_ctl_comm);
-}
-
-static int geopm_comm_split_imp(MPI_Comm comm, const char *tag, int *num_node, MPI_Comm *split_comm, int *is_shm_root)
-{
-    int err, comm_size, comm_rank, shm_rank;
-    MPI_Comm shm_comm = MPI_COMM_NULL, tmp_comm = MPI_COMM_NULL;
-    MPI_Comm *split_comm_ptr;
-
-    *is_shm_root = 0;
-
-    if (split_comm) {
-        split_comm_ptr = split_comm;
-    }
-    else {
-        split_comm_ptr = &tmp_comm;
-    }
-
-    err = MPI_Comm_size(comm, &comm_size);
-    if (!err) {
-        err = MPI_Comm_rank(comm, &comm_rank);
-    }
-    if (!err) {
-        err = geopm_comm_split_shared(comm, tag, &shm_comm);
-    }
-    if (!err) {
-        err = MPI_Comm_rank(shm_comm, &shm_rank);
-    }
-    if (!err) {
-        if (!shm_rank) {
-            *is_shm_root = 1;
-        }
-        else {
-            *is_shm_root = 0;
-        }
-        err = MPI_Comm_split(comm, *is_shm_root, comm_rank, split_comm_ptr);
-    }
-    if (!err) {
-        if (*is_shm_root == 1) {
-            err = MPI_Comm_size(*split_comm_ptr, num_node);
-        }
-    }
-    if (!err) {
-        err = MPI_Bcast(num_node, 1, MPI_INT, 0, shm_comm);
-    }
-    if (shm_comm != MPI_COMM_NULL) {
-        MPI_Comm_free(&shm_comm);
-    }
-    if (!split_comm) {
-        MPI_Comm_free(split_comm_ptr);
-    }
     return err;
 }
 }
+
 namespace geopm
 {
     const char *MPICOMM_DESCRIPTION = "MPIComm";
@@ -201,6 +93,13 @@ namespace geopm
             ex_str << "MPI Error: " << error_str;
             throw Exception(ex_str.str(), GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
         }
+    }
+
+    //const IComm *MPIComm::get_comm()
+    const IComm * MPIComm::get_comm()
+    {
+        static MPIComm const instance;
+        return &instance;
     }
 
     MPIComm::MPIComm()
@@ -235,9 +134,24 @@ namespace geopm
         , m_maxdims(dimension.size())
         , m_description(in_comm->m_description)
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
+        std::cerr << "INPUT::\tdimension.size(): " << dimension.size() << "\t periods.size(): " << periods.size() << "\t is_reorder: " << is_reorder << std::endl;
+        std::cerr << "dimension: {";
+        for (auto i : dimension) {
+            std::cerr << i << ",";
+        }
+        std::cerr << "}" << std::endl;
+
+        std::cerr << "periods: { ";
+        for (auto i : periods) {
+            std::cerr << i << ",";
+        }
+        std::cerr << "}" << std::endl;
         if (in_comm->is_valid()) {
             check_mpi(PMPI_Cart_create(in_comm->m_comm, m_maxdims, dimension.data(), periods.data(), (int) is_reorder, &m_comm));
         }
+        //std::cerr << "OUTPUT::" << std::endl;
+        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     MPIComm::MPIComm(const MPIComm *in_comm, int color, int key)
@@ -245,6 +159,8 @@ namespace geopm
         , m_maxdims(1)
         , m_description(in_comm->m_description)
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
+        std::cerr << "INPUT::\tcolor: " << color << "\tkey: " << key << std::endl;
         static std::map<int, int> color_map = {{M_SPLIT_COLOR_UNDEFINED, MPI_UNDEFINED}};
         auto it = color_map.find(color);
         if (it != color_map.end()) {
@@ -253,6 +169,7 @@ namespace geopm
         if (in_comm->is_valid()) {
             check_mpi(PMPI_Comm_split(in_comm->m_comm, color, key, &m_comm));
         }
+        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     MPIComm::MPIComm(const MPIComm *in_comm, std::string tag, int split_type)
@@ -260,6 +177,8 @@ namespace geopm
         , m_maxdims(1)
         , m_description(in_comm->m_description)
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
+        std::cerr << "INPUT::\ttag: " << tag << "\tsplit_type: " << split_type << std::endl;
         int err = 0;
         if (!in_comm->is_valid()) {
             throw Exception("in_comm is invalid", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
@@ -282,7 +201,7 @@ namespace geopm
         if (err) {
             throw geopm::Exception("geopm_comm_split_ppn1()", err, __FILE__, __LINE__);
         }
-
+        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     MPIComm::MPIComm(const MPIComm *in_comm, std::string tag,  bool &is_ctl)
@@ -290,23 +209,48 @@ namespace geopm
         , m_maxdims(1)
         , m_description(in_comm->m_description)
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
+        std::cerr << "INPUT::\ttag: " << tag << std::endl;
         geopm_comm_split_ppn1(in_comm->m_comm, tag.c_str(), &m_comm);
         if (!is_valid()) {
             is_ctl = false;
         } else {
             is_ctl = true;
         }
-
+        std::cerr << "OUTPUT::\t is_ctl: " << is_ctl << std::endl;
+        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     MPIComm::~MPIComm()
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
         for (auto it = m_windows.begin(); it != m_windows.end(); ++it) {
             delete (CommWindow *) *it;
         }
         if (m_comm != MPI_COMM_WORLD) {
             MPI_Comm_free(&m_comm);
         }
+        std::cerr << __func__ << "<============================exit" << std::endl;
+    }
+
+    IComm* MPIComm::split() const
+    {
+        return new MPIComm(this);
+    }
+
+    IComm* MPIComm::split(int color, int key) const
+    {
+        return new MPIComm(this, color, key);
+    }
+
+    IComm* MPIComm::split(const std::string &tag, int split_type) const
+    {
+        return new MPIComm(this, tag, split_type);
+    }
+
+    IComm* MPIComm::split(std::vector<int> dimensions, std::vector<int> periods, bool is_reorder) const
+    {
+        return new MPIComm(this, dimensions, periods, is_reorder);
     }
 
     bool MPIComm::comm_supported(const std::string &description) const
@@ -317,38 +261,62 @@ namespace geopm
     int MPIComm::cart_rank(std::vector<int> coords) const
     {
         int rank = 0;
+        std::cerr << __func__ << "============================>entry" << std::endl;
+        std::cerr << "INPUT:: coords: {";
+        for (auto i : coords) {
+            std::cerr << i << ",";
+        }
+        std::cerr << "}" << std::endl;
         check_mpi(PMPI_Cart_rank(m_comm, coords.data(), &rank));
+        std::cerr << "OUTPUT::\tcart_rank: " << rank << std::endl;
+        std::cerr << __func__ << "<============================exit" << std::endl;
         return rank;
     }
 
     int MPIComm::rank(void) const
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
         int tmp_rank = 0;
         check_mpi(PMPI_Comm_rank(m_comm, &tmp_rank));
+        std::cerr << "OUTPUT::\trank: " << tmp_rank << std::endl;
+        std::cerr << __func__ << "<============================exit" << std::endl;
         return tmp_rank;
     }
 
     int MPIComm::num_rank(void) const
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
         int tmp_size = 0;
         if (m_comm != MPI_COMM_NULL) {
             check_mpi(PMPI_Comm_size(m_comm, &tmp_size));
         }
+        std::cerr << "OUTPUT::\tsize: " << tmp_size << std::endl;
+        std::cerr << __func__ << "<============================exit" << std::endl;
         return tmp_size;
     }
 
     void MPIComm::dimension_create(int num_nodes, std::vector<int> &dimension) const
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
+        std::cerr << "INPUT::\tnum_nodes: " << num_nodes << "\tdimension.size(): " << dimension.size() << std::endl;
         check_mpi(PMPI_Dims_create(num_nodes, dimension.size(), dimension.data()));
+        std::cerr << "OUTPUT::\tdimension: {";
+        for (auto i : dimension) {
+            std::cerr << i << ", ";
+        }
+        std::cerr << "}" << std::endl;
+        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     void MPIComm::check_window(size_t win_handle) const
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
         if (m_windows.find(win_handle) == m_windows.end()) {
             std::ostringstream ex_str;
             ex_str << "requested window handle " << win_handle << " invalid";
             throw Exception(ex_str.str(), GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
         }
+        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     bool MPIComm::is_valid() const
@@ -394,6 +362,8 @@ namespace geopm
 
     void MPIComm::coordinate(int rank, std::vector<int> &coord) const
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
+        std::cerr << "INPUT::\trank: " << rank << "\tm_maxdims: " << m_maxdims << std::endl;
         size_t in_size = coord.size();
         if (m_maxdims != in_size) {
             std::stringstream ex_str;
@@ -403,6 +373,13 @@ namespace geopm
         if (is_valid()) {
             check_mpi(PMPI_Cart_coords(m_comm, rank, m_maxdims, coord.data()));
         }
+        std::cerr << "OUTPUT::" << std::endl;
+        std::cerr << "coord: {";
+        for (auto i : coord) {
+            std::cerr << i << ", ";
+        }
+        std::cerr << "}" << std::endl;
+        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     void MPIComm::barrier(void) const
@@ -422,27 +399,50 @@ namespace geopm
 
     void MPIComm::reduce_max(double *sendbuf, double *recvbuf, size_t count, int root) const
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
+        std::cerr << "INPUT::\tsendbuf: " << *sendbuf << "\tcount: " << count << "\troot: " << root << std::endl;
         if (is_valid()) {
             check_mpi(PMPI_Reduce(sendbuf, recvbuf, count, MPI_DOUBLE, MPI_MAX, root, m_comm));
         }
+        std::cerr << "OUTPUT::\trecvbuf: " << *recvbuf << std::endl;
+        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     bool MPIComm::test(bool is_true) const
     {
         int is_all_true = 0;
         int tmp_is_true = (int) is_true;
+        std::cerr << __func__ << "============================>entry" << std::endl;
+        std::cerr << "INPUT::\tis_true: " << is_true << std::endl;
         if (is_valid()) {
             check_mpi(PMPI_Allreduce(&tmp_is_true, &is_all_true, 1, MPI_INT, MPI_LAND, m_comm));
         }
+        std::cerr << "OUTPUT::\tis_all_true: " << is_all_true << std::endl;
+        std::cerr << __func__ << "<============================exit" << std::endl;
         return (bool) is_all_true;
     }
 
     void MPIComm::gather(const void *send_buf, size_t send_size, void *recv_buf,
             size_t recv_size, int root) const
     {
+        std::cerr << __func__ << "============================>entry" << std::endl;
+        std::cerr << "gather [in]:\tsend_size: " << send_size << std::endl;
+        std::cerr << "send_buf {";
+        size_t i;
+        for (i = 0; i < send_size; i++) {
+            std::cerr << ((uint8_t *)send_buf)[i] << ", ";
+        }
+        std::cerr << "}" << std::endl;
         if (is_valid()) {
             check_mpi(PMPI_Gather(GEOPM_MPI_CONST_CAST(void *)(send_buf), send_size, MPI_BYTE, recv_buf, recv_size, MPI_BYTE, root, m_comm));
         }
+        std::cerr << "gather [out]:\trecv_size: " << recv_size << std::endl;
+        std::cerr << "recv_buf {";
+        for (i = 0; i < recv_size; i++) {
+            std::cerr << ((uint8_t *)recv_buf)[i] << ", ";
+        }
+        std::cerr << "}" << std::endl;
+        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     void MPIComm::gatherv(const void *send_buf, size_t send_size, void *recv_buf,

@@ -146,6 +146,8 @@ GTEST_TESTS = test/gtest_links/PlatformFactoryTest.platform_register \
               test/gtest_links/CommMPIImpTest.mpi_mem_ops \
               test/gtest_links/CommMPIImpTest.mpi_barrier \
               test/gtest_links/CommMPIImpTest.mpi_win_ops \
+              test/gtest_links/ControllerTest.dummy \
+              test/gtest_links/ControllerTest.stc \
               # end
 
 if ENABLE_MPI
@@ -170,6 +172,7 @@ TESTS += $(GTEST_TESTS) \
          # end
 
 EXTRA_DIST += test/geopm_test.sh \
+              test/ControllerTest.cpp \
               test/MPITreeCommunicatorTest.cpp \
               test/MPIControllerTest.cpp \
               test/MPIInterfaceTest.cpp \
@@ -195,12 +198,14 @@ test_geopm_test_SOURCES = test/geopm_test.cpp \
                           test/BalancingDeciderTest.cpp \
                           plugin/GoverningDecider.hpp \
                           test/GoverningDeciderTest.cpp \
-                          test/MockPlatform.hpp \
+                          test/MockComm.hpp \
+                          test/MockGlobalPolicy.hpp \
                           test/MockPlatformImp.hpp \
                           test/MockPlatformTopology.hpp \
                           test/SharedMemoryTest.cpp \
                           test/EnvironmentTest.cpp \
                           test/CommMPIImpTest.cpp \
+                          #test/ControllerTest.cpp \
                           # end
 
 test_geopm_test_LDADD = libgtest.a \
@@ -224,6 +229,7 @@ endif
 
 if ENABLE_MPI
     test_geopm_mpi_test_SOURCES = test/geopm_mpi_test.cpp \
+                                  test/ControllerTest.cpp \
                                   test/MPITreeCommunicatorTest.cpp \
                                   test/MPISharedMemoryTest.cpp \
                                   test/MPIProfileTest.cpp \

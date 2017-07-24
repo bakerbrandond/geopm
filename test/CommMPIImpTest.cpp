@@ -63,6 +63,20 @@ typedef int MPI_Win;
 
 extern "C"
 {
+int geopm_comm_split_ppn1(MPI_Comm comm, const char *tag, MPI_Comm *ppn1_comm)
+{
+    return 0;
+}
+
+int geopm_comm_split_shared(MPI_Comm comm, const char *tag, MPI_Comm *split_comm)
+{
+    return 0;
+}
+
+int geopm_comm_split(MPI_Comm comm, const char *tag, MPI_Comm *split_comm, int *is_ctl_comm)
+{
+    return 0;
+}
     static std::vector<void *> g_params;
     static std::vector<size_t> g_sizes;
 
@@ -368,7 +382,7 @@ extern "C"
 
 #include "gtest/gtest.h"
 #define GEOPM_TEST
-#include "MPIComm.cpp"
+#include "plugin/MPIComm.cpp"
 
 namespace geopm
 {
@@ -942,6 +956,10 @@ TEST_F(CommMPIImpTest, mpi_win_ops)
 
     tmp_comm.window_destroy(win_handle);
 
-    check_params(); }
+    check_params();
+}
 }
 
+void geopm_factory_register(struct geopm_factory_c *factory, const geopm::IComm *in_comm, void *dl_ptr)
+{
+}

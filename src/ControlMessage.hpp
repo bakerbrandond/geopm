@@ -30,6 +30,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef CONTROLLER_MESSAGE_HPP_INCLUDE
+#define CONTROLLER_MESSAGE_HPP_INCLUDE
+
 #include <stdint.h>
 
 enum geopm_profile_e {
@@ -105,3 +108,4 @@ namespace geopm
     };
 
 }
+#endif
