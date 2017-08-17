@@ -199,13 +199,14 @@ test_geopm_test_SOURCES = test/geopm_test.cpp \
                           plugin/GoverningDecider.hpp \
                           test/GoverningDeciderTest.cpp \
                           test/MockComm.hpp \
+                          test/MockControlMessage.hpp \
                           test/MockGlobalPolicy.hpp \
                           test/MockPlatformImp.hpp \
                           test/MockPlatformTopology.hpp \
                           test/SharedMemoryTest.cpp \
                           test/EnvironmentTest.cpp \
                           test/CommMPIImpTest.cpp \
-                          #test/ControllerTest.cpp \
+						  test/ControllerTest.cpp \
                           # end
 
 test_geopm_test_LDADD = libgtest.a \
