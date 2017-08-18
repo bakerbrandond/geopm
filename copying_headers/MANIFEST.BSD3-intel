@@ -69,7 +69,7 @@ src/geopm_sched.c
 src/geopm_sched.h
 src/geopm_ctl.h
 src/geopm_mpi_comm.h
-src/geopm_mpi_comm.c
+src/geopm_mpi_comm.cpp
 src/geopm_env.h
 src/geopm_error.h
 src/geopm_hash.c
@@ -108,6 +108,8 @@ src/Policy.cpp
 src/Policy.hpp
 src/PolicyFlags.cpp
 src/PolicyFlags.hpp
+src/ProfileSampler.cpp
+src/ProfileSampler.hpp
 src/Profile.cpp
 src/Profile.hpp
 src/ProfileTable.cpp
@@ -149,6 +151,9 @@ test/MockComm.hpp
 test/MockPlatform.hpp
 test/MockPlatformImp.hpp
 test/MockPlatformTopology.hpp
+test/MockControlMessage.hpp
+test/MockGlobalPolicy.hpp
+test/MockProfileSampler.hpp
 test/MPIControllerTest.cpp
 test/MPIControllerDeathTest.cpp
 test/MPIInterfaceTest.cpp

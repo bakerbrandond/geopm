@@ -98,7 +98,7 @@ namespace geopm
     //const IComm *MPIComm::get_comm()
     const IComm * MPIComm::get_comm()
     {
-        static MPIComm const instance;
+        static const MPIComm instance;
         return &instance;
     }
 
@@ -134,24 +134,9 @@ namespace geopm
         , m_maxdims(dimension.size())
         , m_description(in_comm->m_description)
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
-        std::cerr << "INPUT::\tdimension.size(): " << dimension.size() << "\t periods.size(): " << periods.size() << "\t is_reorder: " << is_reorder << std::endl;
-        std::cerr << "dimension: {";
-        for (auto i : dimension) {
-            std::cerr << i << ",";
-        }
-        std::cerr << "}" << std::endl;
-
-        std::cerr << "periods: { ";
-        for (auto i : periods) {
-            std::cerr << i << ",";
-        }
-        std::cerr << "}" << std::endl;
         if (in_comm->is_valid()) {
             check_mpi(PMPI_Cart_create(in_comm->m_comm, m_maxdims, dimension.data(), periods.data(), (int) is_reorder, &m_comm));
         }
-        //std::cerr << "OUTPUT::" << std::endl;
-        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     MPIComm::MPIComm(const MPIComm *in_comm, int color, int key)
@@ -159,8 +144,6 @@ namespace geopm
         , m_maxdims(1)
         , m_description(in_comm->m_description)
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
-        std::cerr << "INPUT::\tcolor: " << color << "\tkey: " << key << std::endl;
         static std::map<int, int> color_map = {{M_SPLIT_COLOR_UNDEFINED, MPI_UNDEFINED}};
         auto it = color_map.find(color);
         if (it != color_map.end()) {
@@ -169,7 +152,6 @@ namespace geopm
         if (in_comm->is_valid()) {
             check_mpi(PMPI_Comm_split(in_comm->m_comm, color, key, &m_comm));
         }
-        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     MPIComm::MPIComm(const MPIComm *in_comm, std::string tag, int split_type)
@@ -177,8 +159,6 @@ namespace geopm
         , m_maxdims(1)
         , m_description(in_comm->m_description)
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
-        std::cerr << "INPUT::\ttag: " << tag << "\tsplit_type: " << split_type << std::endl;
         int err = 0;
         if (!in_comm->is_valid()) {
             throw Exception("in_comm is invalid", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
@@ -201,7 +181,6 @@ namespace geopm
         if (err) {
             throw geopm::Exception("geopm_comm_split_ppn1()", err, __FILE__, __LINE__);
         }
-        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     MPIComm::MPIComm(const MPIComm *in_comm, std::string tag,  bool &is_ctl)
@@ -209,28 +188,22 @@ namespace geopm
         , m_maxdims(1)
         , m_description(in_comm->m_description)
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
-        std::cerr << "INPUT::\ttag: " << tag << std::endl;
         geopm_comm_split_ppn1(in_comm->m_comm, tag.c_str(), &m_comm);
         if (!is_valid()) {
             is_ctl = false;
         } else {
             is_ctl = true;
         }
-        std::cerr << "OUTPUT::\t is_ctl: " << is_ctl << std::endl;
-        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     MPIComm::~MPIComm()
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
         for (auto it = m_windows.begin(); it != m_windows.end(); ++it) {
             delete (CommWindow *) *it;
         }
         if (m_comm != MPI_COMM_WORLD) {
             MPI_Comm_free(&m_comm);
         }
-        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     IComm* MPIComm::split() const
@@ -261,62 +234,38 @@ namespace geopm
     int MPIComm::cart_rank(std::vector<int> coords) const
     {
         int rank = 0;
-        std::cerr << __func__ << "============================>entry" << std::endl;
-        std::cerr << "INPUT:: coords: {";
-        for (auto i : coords) {
-            std::cerr << i << ",";
-        }
-        std::cerr << "}" << std::endl;
         check_mpi(PMPI_Cart_rank(m_comm, coords.data(), &rank));
-        std::cerr << "OUTPUT::\tcart_rank: " << rank << std::endl;
-        std::cerr << __func__ << "<============================exit" << std::endl;
         return rank;
     }
 
     int MPIComm::rank(void) const
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
         int tmp_rank = 0;
         check_mpi(PMPI_Comm_rank(m_comm, &tmp_rank));
-        std::cerr << "OUTPUT::\trank: " << tmp_rank << std::endl;
-        std::cerr << __func__ << "<============================exit" << std::endl;
         return tmp_rank;
     }
 
     int MPIComm::num_rank(void) const
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
         int tmp_size = 0;
         if (m_comm != MPI_COMM_NULL) {
             check_mpi(PMPI_Comm_size(m_comm, &tmp_size));
         }
-        std::cerr << "OUTPUT::\tsize: " << tmp_size << std::endl;
-        std::cerr << __func__ << "<============================exit" << std::endl;
         return tmp_size;
     }
 
     void MPIComm::dimension_create(int num_nodes, std::vector<int> &dimension) const
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
-        std::cerr << "INPUT::\tnum_nodes: " << num_nodes << "\tdimension.size(): " << dimension.size() << std::endl;
         check_mpi(PMPI_Dims_create(num_nodes, dimension.size(), dimension.data()));
-        std::cerr << "OUTPUT::\tdimension: {";
-        for (auto i : dimension) {
-            std::cerr << i << ", ";
-        }
-        std::cerr << "}" << std::endl;
-        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     void MPIComm::check_window(size_t win_handle) const
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
         if (m_windows.find(win_handle) == m_windows.end()) {
             std::ostringstream ex_str;
             ex_str << "requested window handle " << win_handle << " invalid";
             throw Exception(ex_str.str(), GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
         }
-        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     bool MPIComm::is_valid() const
@@ -362,8 +311,6 @@ namespace geopm
 
     void MPIComm::coordinate(int rank, std::vector<int> &coord) const
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
-        std::cerr << "INPUT::\trank: " << rank << "\tm_maxdims: " << m_maxdims << std::endl;
         size_t in_size = coord.size();
         if (m_maxdims != in_size) {
             std::stringstream ex_str;
@@ -373,13 +320,6 @@ namespace geopm
         if (is_valid()) {
             check_mpi(PMPI_Cart_coords(m_comm, rank, m_maxdims, coord.data()));
         }
-        std::cerr << "OUTPUT::" << std::endl;
-        std::cerr << "coord: {";
-        for (auto i : coord) {
-            std::cerr << i << ", ";
-        }
-        std::cerr << "}" << std::endl;
-        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     void MPIComm::barrier(void) const
@@ -399,50 +339,27 @@ namespace geopm
 
     void MPIComm::reduce_max(double *sendbuf, double *recvbuf, size_t count, int root) const
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
-        std::cerr << "INPUT::\tsendbuf: " << *sendbuf << "\tcount: " << count << "\troot: " << root << std::endl;
         if (is_valid()) {
             check_mpi(PMPI_Reduce(sendbuf, recvbuf, count, MPI_DOUBLE, MPI_MAX, root, m_comm));
         }
-        std::cerr << "OUTPUT::\trecvbuf: " << *recvbuf << std::endl;
-        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     bool MPIComm::test(bool is_true) const
     {
         int is_all_true = 0;
         int tmp_is_true = (int) is_true;
-        std::cerr << __func__ << "============================>entry" << std::endl;
-        std::cerr << "INPUT::\tis_true: " << is_true << std::endl;
         if (is_valid()) {
             check_mpi(PMPI_Allreduce(&tmp_is_true, &is_all_true, 1, MPI_INT, MPI_LAND, m_comm));
         }
-        std::cerr << "OUTPUT::\tis_all_true: " << is_all_true << std::endl;
-        std::cerr << __func__ << "<============================exit" << std::endl;
         return (bool) is_all_true;
     }
 
     void MPIComm::gather(const void *send_buf, size_t send_size, void *recv_buf,
             size_t recv_size, int root) const
     {
-        std::cerr << __func__ << "============================>entry" << std::endl;
-        std::cerr << "gather [in]:\tsend_size: " << send_size << std::endl;
-        std::cerr << "send_buf {";
-        size_t i;
-        for (i = 0; i < send_size; i++) {
-            std::cerr << ((uint8_t *)send_buf)[i] << ", ";
-        }
-        std::cerr << "}" << std::endl;
         if (is_valid()) {
             check_mpi(PMPI_Gather(GEOPM_MPI_CONST_CAST(void *)(send_buf), send_size, MPI_BYTE, recv_buf, recv_size, MPI_BYTE, root, m_comm));
         }
-        std::cerr << "gather [out]:\trecv_size: " << recv_size << std::endl;
-        std::cerr << "recv_buf {";
-        for (i = 0; i < recv_size; i++) {
-            std::cerr << ((uint8_t *)recv_buf)[i] << ", ";
-        }
-        std::cerr << "}" << std::endl;
-        std::cerr << __func__ << "<============================exit" << std::endl;
     }
 
     void MPIComm::gatherv(const void *send_buf, size_t send_size, void *recv_buf,
