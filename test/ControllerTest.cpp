@@ -52,6 +52,145 @@
 #include "MockProfileSampler.hpp"
 #include "MockControlMessage.hpp"
 
+ACTION_P(SetArg0ToVoidP, value)
+{
+    arg0 = static_cast<void  *>(value);
+}
+
+void MockComm::config_in_comm(MockComm *ppn1)
+{
+    EXPECT_CALL(*this, split(testing::Matcher<const std::string&>(testing::_), testing::_))
+        .WillOnce(testing::Return(ppn1));
+}
+
+void MockComm::config_ppn1(std::string header, int num_rank, int rank)
+{
+    m_num_rank = num_rank;
+    m_rank = rank;
+    m_len = header.length();
+    header.copy(m_header, m_len, 0);
+    EXPECT_CALL(*this, num_rank()).WillRepeatedly(testing::Return(m_num_rank));
+    EXPECT_CALL(*this, rank()).WillRepeatedly(testing::Return(m_rank));
+    EXPECT_CALL(*this, barrier()).WillRepeatedly(testing::Return());
+    EXPECT_CALL(*this, broadcast(testing::_, testing::_, testing::_))
+        .WillOnce(testing::Return())
+        .WillOnce(SetArg0ToVoidP(&m_len))
+        .WillOnce(SetArg0ToVoidP(m_header));
+}
+
+void MockGlobalPolicy::config(int mode, int budget, std::string tree_decider, std::string leaf_decider)
+{
+    m_mode = mode;
+    m_power_budget_watts = budget;
+    m_tree_decider = tree_decider;
+    m_leaf_decider = leaf_decider;
+
+    switch (m_mode) {
+        case GEOPM_POLICY_MODE_TDP_BALANCE_STATIC:
+            m_mode_str = "TDP_BALANCE_STATIC";
+            break;
+        case GEOPM_POLICY_MODE_FREQ_UNIFORM_STATIC:
+            m_mode_str = "FREQ_UNIFORM_STATIC";
+            break;
+        case GEOPM_POLICY_MODE_FREQ_HYBRID_STATIC:
+            m_mode_str = "FREQ_HYBRID_STATIC";
+            break;
+        case GEOPM_POLICY_MODE_PERF_BALANCE_DYNAMIC:
+            m_mode_str = "PERF_BALANCE_DYNAMIC";
+            break;
+        case GEOPM_POLICY_MODE_FREQ_UNIFORM_DYNAMIC:
+            m_mode_str = "FREQ_UNIFORM_DYNAMIC";
+            break;
+        case GEOPM_POLICY_MODE_FREQ_HYBRID_DYNAMIC:
+            m_mode_str = "FREQ_HYBRID_DYNAMIC";
+            break;
+        case GEOPM_POLICY_MODE_STATIC:
+            m_mode_str = "STATIC";
+            break;
+        case GEOPM_POLICY_MODE_DYNAMIC:
+            m_mode_str = "DYNAMIC";
+            break;
+        case GEOPM_POLICY_MODE_SHUTDOWN:
+            m_mode_str = "SHUTDOWN";
+            break;
+        default:
+            m_mode_str = "INVALID";
+    }
+
+    geopm_policy_message_s pol_mess = {m_mode, 0, 1, (double) m_power_budget_watts};
+    geopm_policy_message_s shutdown_mess = {GEOPM_POLICY_MODE_SHUTDOWN, 0, 1, (double) m_power_budget_watts};
+    m_pol_mess = pol_mess;
+    m_shutdown_mess = shutdown_mess;
+
+    m_header = std::string("# \"geopm_version\" : \"tag+branchNNgHASH\",\n# \"profile_name\" : \"controller_mock_test\",\n# \"power_budget\" : 600,\n# \"tree_decider\" : \"power_balancing\",\n# \"leaf_decide");
+
+    EXPECT_CALL(*this, mode()).WillOnce(testing::Return(m_mode));
+    EXPECT_CALL(*this, mode_string()).WillOnce(testing::Return(m_mode_str));
+    EXPECT_CALL(*this, header()).WillOnce(testing::Return(m_header));
+    EXPECT_CALL(*this, policy_message(testing::_))
+        .WillOnce(testing::SetArgReferee<0>(m_pol_mess))
+        .WillOnce(testing::SetArgReferee<0>(m_pol_mess))
+        .WillRepeatedly(testing::SetArgReferee<0>(m_shutdown_mess));
+    EXPECT_CALL(*this, tree_decider()).WillRepeatedly(testing::ReturnRef(m_tree_decider));
+    EXPECT_CALL(*this, leaf_decider()).WillRepeatedly(testing::ReturnRef(m_leaf_decider));
+    EXPECT_CALL(*this, budget_watts()).WillRepeatedly(testing::Return(m_power_budget_watts));
+}
+
+MockProfileSampler::MockProfileSampler(int num_cpu)
+    : m_table_size(num_cpu * 64)
+{
+    m_ctl_msg = new MockControlMessage();
+    m_tbuf = malloc(m_table_size);
+    m_tprof_table = new geopm::ProfileThreadTable(m_table_size, m_tbuf);
+    m_cpu_rank.resize(num_cpu);
+}
+
+void MockProfileSampler::config(std::string report_name, std::string profile_name) {
+    m_report_name = report_name;
+    m_profile_name = profile_name;
+
+    std::string region_name = "app_region";
+    uint64_t region_id = geopm_crc32_str(0, region_name.c_str());
+    m_name_set = {region_name};
+    std::fill(m_cpu_rank.begin(), m_cpu_rank.end(), -1);
+    for (size_t i = 0; i < m_cpu_rank.size(); i++) {
+        m_cpu_rank[i] = i;
+    }
+    int ranks_per_node = 4;
+    geopm_time_s ts_epoch;
+    geopm_time(&ts_epoch);
+    geopm_time_s ts_entry;
+    geopm_time(&ts_entry);
+    sleep(1);
+    geopm_time_s ts_exit;
+    geopm_time(&ts_exit);
+    geopm_prof_message_s prof_mess_epoch_entry = {0, GEOPM_REGION_ID_EPOCH, ts_epoch, 0.0};
+    geopm_prof_message_s prof_mess_epoch_exit = {0, GEOPM_REGION_ID_EPOCH, ts_epoch, 1.0};
+    geopm_prof_message_s prof_mess_entry = {0, region_id, ts_entry, 0.0};
+    geopm_prof_message_s prof_mess_exit = {0, region_id, ts_exit, 1.0};
+    std::pair<uint64_t, struct geopm_prof_message_s> epoch_entry_sample(GEOPM_REGION_ID_EPOCH, prof_mess_epoch_entry);
+    std::pair<uint64_t, struct geopm_prof_message_s> epoch_exit_sample(GEOPM_REGION_ID_EPOCH, prof_mess_epoch_exit);
+    std::pair<uint64_t, struct geopm_prof_message_s> entry_sample(region_id, prof_mess_entry);
+    std::pair<uint64_t, struct geopm_prof_message_s> exit_sample(region_id, prof_mess_exit);
+    std::vector<std::pair<uint64_t, struct geopm_prof_message_s> > samples {epoch_entry_sample, entry_sample, exit_sample, epoch_exit_sample};
+
+    EXPECT_CALL(*this, initialize(testing::_)).WillOnce(testing::SetArgReferee<0>(ranks_per_node));
+    EXPECT_CALL(*this, do_report()).WillRepeatedly(testing::Return(true));
+    EXPECT_CALL(*this, tprof_table()).WillRepeatedly(testing::Return(m_tprof_table));
+    EXPECT_CALL(*this, cpu_rank(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(m_cpu_rank));
+    EXPECT_CALL(*this, name_set(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(m_name_set));
+    EXPECT_CALL(*this, sample(testing::_, testing::_, testing::_)).WillRepeatedly(testing::DoAll(testing::SetArgReferee<0>(samples), testing::SetArgReferee<1>(samples.size())));
+    EXPECT_CALL(*this, report_name(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(m_report_name));
+    EXPECT_CALL(*this, profile_name(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(m_profile_name));
+}
+
+MockProfileSampler::~MockProfileSampler()
+{
+    delete m_ctl_msg;
+    delete m_tprof_table;
+    free(m_tbuf);
+}
+
 namespace geopm
 {
 class ControllerTestHelper : public Controller
@@ -105,90 +244,27 @@ TEST_F(ControllerTest, dummy)
     Controller con(&mock_policy, &mock_in_comm);
 }
 
-ACTION_P(SetArg0ToVoidP, value)
-{
-    arg0 = static_cast<void  *>(value);
-}
-
 TEST_F(ControllerTest, stc)
 {
-    MockComm mock_in_comm;
-    MockComm *mock_ppn1 = new MockComm();
-    MockGlobalPolicy mock_policy;
-    MockProfileSampler *mock_sampler = new MockProfileSampler();
-    MockControlMessage *mock_ctl_msg = new MockControlMessage();
-    mock_sampler->m_ctl_msg = mock_ctl_msg;
-    std::string tree_decider = "power_balancing";
-    std::string leaf_decider = "static_policy";
     std::string report_name = "controller_mock_test.report";// TODO make empty string to execute branch
     std::string profile_name = "controller_mock_test.profile";
-    int budget = 150;
-    char header[] = "# \"geopm_version\" : \"tag+branchNNgHASH\",\n# \"profile_name\" : \"controller_mock_test\",\n# \"power_budget\" : 150,\n# \"tree_decider\" : \"power_balancing\",\n# \"leaf_decide";
-    int len = sizeof(header);
-    std::string region_name = "app_region";
-    uint64_t region_id = geopm_crc32_str(0, region_name.c_str());
-    std::set<std::string> region_name_set = {region_name};
-    geopm_time_s ts_epoch;
-    geopm_time(&ts_epoch);
-    geopm_time_s ts_entry;
-    geopm_time(&ts_entry);
-    sleep(1);
-    geopm_time_s ts_exit;
-    geopm_time(&ts_exit);
-    geopm_policy_message_s pol_mess = {GEOPM_POLICY_MODE_PERF_BALANCE_DYNAMIC, 0, 1, 600};
-    geopm_policy_message_s shutdown_mess = {GEOPM_POLICY_MODE_SHUTDOWN, 0, 1, 600};
-    geopm_prof_message_s prof_mess_epoch_entry = { 0, GEOPM_REGION_ID_EPOCH, ts_epoch, 0.0};
-    geopm_prof_message_s prof_mess_epoch_exit = { 0, GEOPM_REGION_ID_EPOCH, ts_epoch, 1.0};
-    geopm_prof_message_s prof_mess_entry = { 0, region_id, ts_entry, 0.0};
-    geopm_prof_message_s prof_mess_exit = { 0, region_id, ts_exit, 1.0};
-    std::pair<uint64_t, struct geopm_prof_message_s> epoch_entry_sample(GEOPM_REGION_ID_EPOCH, prof_mess_epoch_entry);
-    std::pair<uint64_t, struct geopm_prof_message_s> epoch_exit_sample(GEOPM_REGION_ID_EPOCH, prof_mess_epoch_exit);
-    std::pair<uint64_t, struct geopm_prof_message_s> entry_sample(region_id, prof_mess_entry);
-    std::pair<uint64_t, struct geopm_prof_message_s> exit_sample(region_id, prof_mess_exit);
-    std::vector<std::pair<uint64_t, struct geopm_prof_message_s> > samples {epoch_entry_sample, entry_sample, exit_sample, epoch_exit_sample};
-    int ranks_per_node = 4;
-    geopm_policy_message_s mess = { GEOPM_POLICY_MODE_PERF_BALANCE_DYNAMIC, 0, 1, (double) budget};
-    int num_cpu = geopm_sched_num_cpu();
-    std::vector<int> cpu_rank(num_cpu);
-    std::fill(cpu_rank.begin(), cpu_rank.end(), -1);
-    size_t tbuf_size = num_cpu * 64;
-    void *tbuf = malloc(tbuf_size);
-    ProfileThreadTable *tprof_table = new ProfileThreadTable(tbuf_size, tbuf);
-    cpu_rank[224] = 0;
-    cpu_rank[225] = 1;
-    cpu_rank[226] = 2;
-    cpu_rank[227] = 3;
-    EXPECT_CALL(*mock_sampler, initialize(testing::_)).WillOnce(testing::SetArgReferee<0>(ranks_per_node));
-    EXPECT_CALL(*mock_sampler, do_report()).WillRepeatedly(testing::Return(true));
-    EXPECT_CALL(*mock_sampler, tprof_table()).WillRepeatedly(testing::Return(tprof_table));
-    EXPECT_CALL(*mock_sampler, cpu_rank(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(cpu_rank));
-    EXPECT_CALL(*mock_sampler, name_set(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(region_name_set));
-    EXPECT_CALL(*mock_sampler, sample(testing::_, testing::_, testing::_)).WillRepeatedly(testing::DoAll(testing::SetArgReferee<0>(samples), testing::SetArgReferee<1>(samples.size())));
-    EXPECT_CALL(*mock_sampler, report_name(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(report_name));
-    EXPECT_CALL(*mock_sampler, profile_name(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(profile_name));
-    EXPECT_CALL(mock_policy, mode()).WillOnce(testing::Return(mess.mode));
-    EXPECT_CALL(mock_policy, header()).WillOnce(testing::Return(header));
-    EXPECT_CALL(mock_policy, policy_message(testing::_))
-        .WillOnce(testing::SetArgReferee<0>(pol_mess))
-        .WillOnce(testing::SetArgReferee<0>(pol_mess))
-        .WillRepeatedly(testing::SetArgReferee<0>(shutdown_mess));
-    EXPECT_CALL(mock_policy, tree_decider()).WillRepeatedly(testing::ReturnRef(tree_decider));
-    EXPECT_CALL(mock_policy, leaf_decider()).WillRepeatedly(testing::ReturnRef(leaf_decider));
-    EXPECT_CALL(mock_policy, budget_watts()).WillRepeatedly(testing::Return(budget));
-    //EXPECT_CALL(mock_policy, policy_message(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(pol_mess));
-    EXPECT_CALL(mock_in_comm, split(testing::Matcher<const std::string&>(testing::_), testing::_))
-        .WillOnce(testing::Return(mock_ppn1));
-    EXPECT_CALL(*mock_ppn1, num_rank()).WillRepeatedly(testing::Return(1));
-    EXPECT_CALL(*mock_ppn1, rank()).WillRepeatedly(testing::Return(0));
-    EXPECT_CALL(*mock_ppn1, barrier()).WillRepeatedly(testing::Return());
-    EXPECT_CALL(*mock_ppn1, broadcast(testing::_, testing::_, testing::_))
-        .WillOnce(testing::Return())
-        .WillOnce(SetArg0ToVoidP(&len))
-        .WillOnce(SetArg0ToVoidP(header));
+    MockProfileSampler *mock_sampler = new MockProfileSampler(geopm_sched_num_cpu());
+    mock_sampler->config(report_name, profile_name);
+
+    MockGlobalPolicy mock_policy;
+    std::string tree_decider = "power_balancing";
+    std::string leaf_decider = "static_policy";
+    mock_policy.config(GEOPM_POLICY_MODE_PERF_BALANCE_DYNAMIC, 600, tree_decider, leaf_decider);
+
+    MockComm mock_in_comm;
+    MockComm *mock_ppn1 = new MockComm();
+    mock_in_comm.config_in_comm(mock_ppn1);
+    mock_ppn1->config_ppn1(mock_policy.get_header(), 1, 0);
+
     ControllerTestHelper ctl(&mock_policy, &mock_in_comm, mock_sampler);
-    int err = 0;
+
+    EXPECT_EQ(ctl.is_node_root(), true);
+
     ctl.run();
-    EXPECT_EQ(err, 0);
-    free(tbuf);
 }
 }

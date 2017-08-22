@@ -36,10 +36,14 @@
 #include "geopm_message.h"
 #include "ProfileThread.hpp"
 #include "ProfileSampler.hpp"
-#include "MockControlMessage.hpp"
+#include "ControlMessage.hpp"
 
 class MockProfileSampler : public geopm::IProfileSampler {
     public:
+        MockProfileSampler(int num_cpu);
+        ~MockProfileSampler();
+        void config(std::string report_name, std::string profile_name);
+
         MOCK_METHOD0(capacity,
             size_t (void));
         MOCK_METHOD3(sample,
@@ -62,6 +66,17 @@ class MockProfileSampler : public geopm::IProfileSampler {
             void (std::string &prof_str));
         MOCK_METHOD0(tprof_table,
             geopm::IProfileThreadTable *(void));
-    //protected:
-        MockControlMessage *m_ctl_msg;
+    protected:
+        //ISharedMemory *m_ctl_shmem;
+        geopm::IControlMessage *m_ctl_msg;
+        //std::forward_list<IProfileRankSampler *> m_rank_sampler;
+        std::vector<int> m_cpu_rank;
+        std::set<std::string> m_name_set;
+        std::string m_report_name;
+        std::string m_profile_name;
+        const size_t m_table_size;
+        bool m_do_report;
+        //ISharedMemory *m_tprof_shmem;
+        void *m_tbuf;
+        geopm::IProfileThreadTable *m_tprof_table;
 };

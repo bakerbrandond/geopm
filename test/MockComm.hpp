@@ -36,6 +36,8 @@
 
 class MockComm : public geopm::IComm {
     public:
+        void config_in_comm(MockComm *ppn1);
+        void config_ppn1(std::string header, int num_rank, int rank);
         MOCK_CONST_METHOD0(split,
             IComm *(void));
         MOCK_CONST_METHOD2(split,
@@ -84,4 +86,9 @@ class MockComm : public geopm::IComm {
                 const std::vector<size_t> &recv_sizes, const std::vector<off_t> &rank_offset, int root));
         MOCK_CONST_METHOD5(window_put,
             void (const void *send_buf, size_t send_size, int rank, off_t disp, size_t window_id));
+    protected:
+        int m_num_rank;
+        int m_rank;
+        int m_len;
+        char m_header[256];
 };

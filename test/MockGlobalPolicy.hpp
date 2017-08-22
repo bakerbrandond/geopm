@@ -36,6 +36,9 @@
 
 class MockGlobalPolicy : public geopm::IGlobalPolicy {
     public:
+        void config(int mode, int budget, std::string tree_decider, std::string leaf_decider);
+        std::string get_header() { return m_header; }
+
         MOCK_CONST_METHOD0(mode,
             int (void));
         MOCK_CONST_METHOD0(frequency_mhz,
@@ -88,4 +91,13 @@ class MockGlobalPolicy : public geopm::IGlobalPolicy {
             void (void));
         MOCK_CONST_METHOD0(header,
             std::string (void));
+    protected:
+        int m_mode;
+        std::string m_mode_str;
+        int m_power_budget_watts;
+        std::string m_tree_decider;
+        std::string m_leaf_decider;
+        std::string m_header;
+        geopm_policy_message_s m_pol_mess;
+        geopm_policy_message_s m_shutdown_mess;
 };
