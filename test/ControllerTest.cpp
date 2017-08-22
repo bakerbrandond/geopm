@@ -145,6 +145,13 @@ MockProfileSampler::MockProfileSampler(int num_cpu)
     m_cpu_rank.resize(num_cpu);
 }
 
+MockProfileSampler::~MockProfileSampler()
+{
+    delete m_ctl_msg;
+    delete m_tprof_table;
+    free(m_tbuf);
+}
+
 void MockProfileSampler::config(std::string report_name, std::string profile_name) {
     m_report_name = report_name;
     m_profile_name = profile_name;
@@ -182,13 +189,6 @@ void MockProfileSampler::config(std::string report_name, std::string profile_nam
     EXPECT_CALL(*this, sample(testing::_, testing::_, testing::_)).WillRepeatedly(testing::DoAll(testing::SetArgReferee<0>(samples), testing::SetArgReferee<1>(samples.size())));
     EXPECT_CALL(*this, report_name(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(m_report_name));
     EXPECT_CALL(*this, profile_name(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(m_profile_name));
-}
-
-MockProfileSampler::~MockProfileSampler()
-{
-    delete m_ctl_msg;
-    delete m_tprof_table;
-    free(m_tbuf);
 }
 
 namespace geopm
