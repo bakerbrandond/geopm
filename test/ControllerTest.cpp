@@ -43,6 +43,7 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "geopm.h"
+#include "geopm_version.h"
 #include "geopm_hash.h"
 #include "geopm_time.h"
 #include "geopm_sched.h"
@@ -197,6 +198,7 @@ class ControllerTestHelper : public Controller
 {
     public:
         ControllerTestHelper(IGlobalPolicy *global_policy, const IComm *comm, MockProfileSampler *swap);
+        void shutdown(bool sd);
 };
 
 ControllerTestHelper::ControllerTestHelper(IGlobalPolicy *global_policy, const IComm *comm, MockProfileSampler *swap)
@@ -204,6 +206,11 @@ ControllerTestHelper::ControllerTestHelper(IGlobalPolicy *global_policy, const I
 {
     delete m_sampler;
     m_sampler = swap;
+}
+
+void ControllerTestHelper::shutdown(bool sd)
+{
+    m_do_shutdown = sd;
 }
 
 class ControllerTest : public :: testing :: Test
@@ -219,6 +226,32 @@ void ControllerTest::SetUp()
 
 void ControllerTest::TearDown()
 {
+}
+
+TEST_F(ControllerTest, exceptions)
+{
+    MockGlobalPolicy mock_policy;
+    MockComm mock_in_comm;
+    MockComm *mock_ppn1 = new MockComm();
+    MockProfileSampler *mock_sampler = new MockProfileSampler(geopm_sched_num_cpu());
+    EXPECT_CALL(mock_in_comm, split(testing::Matcher<const std::string&>(testing::_), testing::_))
+        .WillRepeatedly(testing::Return(mock_ppn1));
+    EXPECT_CALL(*mock_ppn1, num_rank()).WillRepeatedly(testing::Return(1));
+    EXPECT_CALL(*mock_ppn1, rank()).WillRepeatedly(testing::Return(0));
+    EXPECT_THROW(geopm::Controller ctl(NULL, &mock_in_comm), geopm::Exception);
+    EXPECT_CALL(mock_policy, mode()).WillOnce(testing::Return(0xDEADBEEF));
+    EXPECT_THROW(geopm::Controller ctl(&mock_policy, &mock_in_comm), geopm::Exception);
+    EXPECT_CALL(mock_policy, mode()).WillOnce(testing::Return(GEOPM_POLICY_MODE_TDP_BALANCE_STATIC));
+    EXPECT_THROW(geopm::Controller ctl(&mock_policy, &mock_in_comm), geopm::Exception);
+    EXPECT_CALL(mock_policy, mode()).WillOnce(testing::Return(-1));
+    EXPECT_THROW(geopm::Controller ctl(&mock_policy, &mock_in_comm), geopm::Exception);
+    EXPECT_CALL(mock_policy, mode()).WillOnce(testing::Return(GEOPM_POLICY_MODE_STATIC));
+    ControllerTestHelper ctl(&mock_policy, &mock_in_comm, mock_sampler);
+    EXPECT_CALL(mock_policy, policy_message(testing::_)).WillOnce(testing::Throw(geopm::Exception()));
+    EXPECT_THROW(ctl.run(), geopm::Exception);
+    EXPECT_CALL(mock_policy, policy_message(testing::_)).WillOnce(testing::Return());
+    ctl.shutdown(true);
+    EXPECT_THROW(ctl.step(), geopm::Exception);
 }
 
 TEST_F(ControllerTest, dummy)

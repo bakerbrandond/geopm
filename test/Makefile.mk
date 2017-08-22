@@ -146,6 +146,7 @@ GTEST_TESTS = test/gtest_links/PlatformFactoryTest.platform_register \
               test/gtest_links/CommMPIImpTest.mpi_mem_ops \
               test/gtest_links/CommMPIImpTest.mpi_barrier \
               test/gtest_links/CommMPIImpTest.mpi_win_ops \
+              test/gtest_links/ControllerTest.exceptions \
               test/gtest_links/ControllerTest.dummy \
               test/gtest_links/ControllerTest.stc \
               # end
