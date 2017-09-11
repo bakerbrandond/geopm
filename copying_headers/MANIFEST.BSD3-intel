@@ -186,7 +186,7 @@ test/MPIControllerTest.cpp
 test/MPIInterfaceTest.cpp
 test/MPIProfileTest.cpp
 test/MPISharedMemoryTest.cpp
-test/MPITreeCommunicatorTest.cpp
+test/TreeCommunicatorTest.cpp
 test/no_omp_cpu.c
 test/PlatformFactoryTest.cpp
 test/PlatformImpTest.cpp

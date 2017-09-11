@@ -164,13 +164,12 @@ GTEST_TESTS = test/gtest_links/PlatformFactoryTest.platform_register \
               test/gtest_links/CommMPIImpTest.mpi_mem_ops \
               test/gtest_links/CommMPIImpTest.mpi_barrier \
               test/gtest_links/CommMPIImpTest.mpi_win_ops \
+              test/gtest_links/TreeCommunicatorTest.hello \
+              test/gtest_links/TreeCommunicatorTest.TODO \
               # end
 
 if ENABLE_MPI
-GTEST_TESTS += test/gtest_links/MPITreeCommunicatorTest.hello \
-               test/gtest_links/MPITreeCommunicatorTest.send_policy_down \
-               test/gtest_links/MPITreeCommunicatorTest.send_sample_up \
-               test/gtest_links/MPISharedMemoryTest.hello \
+GTEST_TESTS += test/gtest_links/MPISharedMemoryTest.hello \
                test/gtest_links/MPIProfileTest.runtime \
                test/gtest_links/MPIProfileTest.progress \
                test/gtest_links/MPIProfileTest.multiple_entries \
@@ -188,7 +187,6 @@ TESTS += $(GTEST_TESTS) \
          # end
 
 EXTRA_DIST += test/geopm_test.sh \
-              test/MPITreeCommunicatorTest.cpp \
               test/MPIControllerTest.cpp \
               test/MPIInterfaceTest.cpp \
               test/no_omp_cpu.c \
@@ -222,6 +220,7 @@ test_geopm_test_SOURCES = test/geopm_test.cpp \
                           test/SchedTest.cpp \
                           test/ControlMessageTest.cpp \
                           test/CommMPIImpTest.cpp \
+                          test/TreeCommunicatorTest.cpp \
                           # end
 
 test_geopm_test_LDADD = libgtest.a \
@@ -245,7 +244,6 @@ endif
 
 if ENABLE_MPI
     test_geopm_mpi_test_SOURCES = test/geopm_mpi_test.cpp \
-                                  test/MPITreeCommunicatorTest.cpp \
                                   test/MPISharedMemoryTest.cpp \
                                   test/MPIProfileTest.cpp \
                                   test/MPIControllerDeathTest.cpp \
