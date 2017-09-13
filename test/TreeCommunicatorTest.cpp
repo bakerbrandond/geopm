@@ -60,7 +60,7 @@ struct level_context_s
     int level;
     bool pol_sender;
     bool samp_snder;
-    struct geopm_policy_message_s policy;
+    std::vector<struct geopm_policy_message_s *> policies;
     std::vector<struct geopm_sample_message_s> samples;
 };
 
@@ -140,60 +140,118 @@ void TreeCommunicatorTest::config_level_comms(std::vector<int> sizes, std::vecto
     for (size_t level = 0; level < m_level_comms.size(); level++) {
         MockComm *level_comm = m_level_comms[level];
         m_level_ctxs[level].level = level;
+        m_level_ctxs[level].policies.resize(sizes[level]);
+        //for (size_t pol = 1; pol < m_level_ctxs[level].policies.size(); pol++) {
+                //m_level_ctxs[level].policies[pol] = (struct geopm_policy_message_s *) malloc(sizeof(geopm_policy_message_s));
+        //}
         m_level_ctxs[level].samples.resize(sizes[level]);
         struct level_context_s *s_lcs = &m_level_ctxs[level];
         EXPECT_CALL(*level_comm, num_rank())
             .WillRepeatedly(testing::Return(sizes[level]));
+        int rank = ranks[level];
         EXPECT_CALL(*level_comm, rank())
-            .WillRepeatedly(testing::Return(ranks[level]));
+            .WillRepeatedly(testing::Return(rank));
         m_level_ctxs.resize(sizes[level]);
         EXPECT_CALL(*level_comm, alloc_mem(testing::_, testing::_))
             .WillRepeatedly(testing::Invoke([this, level] (size_t size, void **base)
-                            {
-                            struct level_context_s *lcs = &this->m_level_ctxs[level];
-                            *base = static_cast<void *> (lcs->samples.data());
-                            }));
+            {
+                struct level_context_s *lcs = &this->m_level_ctxs[level];
+                *base = static_cast<void *> (lcs->samples.data());
+            }));
         EXPECT_CALL(*level_comm, free_mem(testing::_))
             .WillRepeatedly(testing::Return());
         EXPECT_CALL(*level_comm, barrier()).WillRepeatedly(testing::Return());
         testing::Sequence s1;
         EXPECT_CALL(*level_comm, window_create(testing::_, testing::_))
             .InSequence(s1)
-            .WillOnce(testing::Invoke([this, level] (size_t size, void *base)
-                            {
-                            struct level_context_s *lcs = &this->m_level_ctxs[level];
-                            //policy window
-                            lcs->pol_sender = size == 0;
-                            return 0;
-                            }))
-            .WillOnce(testing::Invoke([this, level] (size_t size, void *base)
-                            {
-                            struct level_context_s *lcs = &this->m_level_ctxs[level];
-                            //sample window
-                            lcs->samp_snder = size == 0;
-                            return 1;
-                            }));
+            .WillOnce(testing::Invoke([this, level, rank] (size_t size, void *base)
+            {
+                //policy window
+                struct level_context_s *lcs = &this->m_level_ctxs[level];
+                lcs->pol_sender = size == 0;
+                if (!lcs->pol_sender) {
+                //assert rank 0?
+                //assert size == sizeof(struct geopm_policy_message_s)
+                //lcs->policies[rank] = (struct geopm_policy_message_s *) base;
+                for (size_t pol = 1; pol < lcs->policies.size(); pol++) {
+                        m_level_ctxs[level].policies[pol] = (struct geopm_policy_message_s *) malloc(sizeof(geopm_policy_message_s));
+                }
+                } else {
+                //assert?
+                }
+                return 0;
+            }))
+            .WillOnce(testing::Invoke([this, level, ranks] (size_t size, void *base)
+            {
+                struct level_context_s *lcs = &this->m_level_ctxs[level];
+                //sample window
+                lcs->samp_snder = size == 0;
+                return 1;
+            }));
         EXPECT_CALL(*level_comm, window_destroy(testing::_))
-            .WillRepeatedly(testing::Return());
-        EXPECT_CALL(*level_comm, window_lock(testing::_, testing::_, testing::_, testing::_))
-            .WillRepeatedly(testing::Invoke([this, level] (size_t window_id, bool is_exclusive, int rank, int assert)
-                            {
-                            struct level_context_s *lcs = &this->m_level_ctxs[level];
-                            switch (window_id) {
-                                case 0:  //policy window:
-                                    if (lcs->pol_sender) {
-                                    } else {
-                                         this->m_polctl->policy_message(lcs->policy);
-                                    }
-                                    break;
-                                case 1:  //sample window:
-                                    if (lcs->samp_snder) {
-                                    } else {
-                                    std::fill(lcs->samples.begin(), lcs->samples.end(), GEOPM_SAMPLE_INVALID);
-                                    }
-                                    break;
+            //.Times(1)
+            .WillRepeatedly(testing::Invoke([this, level, rank] (size_t window_id)
+            {
+                switch (window_id) {
+                    case 0:
+                        //policy window
+                        struct level_context_s *lcs = &this->m_level_ctxs[level];
+                        if (lcs->pol_sender) {
+                            for (size_t pol = 1; pol < lcs->policies.size(); pol++) {
+                                    free(m_level_ctxs[level].policies[pol]);
                             }
-                            }));
+                        } else {
+                        }
+                        break;
+                    case 1:
+                        //sample window
+                        break;
+                }
+            }));
+        EXPECT_CALL(*level_comm, window_lock(testing::_, testing::_, testing::_, testing::_))
+            .WillRepeatedly(testing::Invoke([this, level, rank] (size_t window_id, bool is_exclusive, int rank, int assert)
+            {
+                struct geopm_policy_message_s pm = {GEOPM_POLICY_MODE_PERF_BALANCE_DYNAMIC, 0xDEADBEEF, 5, 75500};// TODO member
+                struct level_context_s *lcs = &this->m_level_ctxs[level];
+                switch (window_id) {
+                    case 0:  //policy window:
+                        if (lcs->pol_sender) {
+                             //this->m_polctl->policy_message(pm);
+                        } else {
+                            memcpy(lcs->policies[rank], &pm, sizeof(pm));
+                             //this->m_polctl->policy_message(*lcs->policy);
+                        }
+                        break;
+                    case 1:  //sample window:
+                        if (lcs->samp_snder) {
+                        } else {
+                            std::fill(lcs->samples.begin(), lcs->samples.end(), GEOPM_SAMPLE_INVALID);
+                        }
+                        break;
+                }
+            }));
+        EXPECT_CALL(*level_comm, window_put(testing::_, testing::_, testing::_, testing::_, testing::_))
+            .WillRepeatedly(testing::Invoke([this, level, rank] (const void *send_buf, size_t send_size, int rank, off_t disp, size_t window_id)
+            {
+                struct level_context_s *lcs = &this->m_level_ctxs[level];
+                switch (window_id) {
+                    case 0:  //policy window:
+                        if (lcs->pol_sender) {
+                            // assert rank == 0?
+                            memcpy(lcs->policies[rank], send_buf, send_size);
+                             //this->m_polctl->policy_message(pm);
+                        } else {
+                            // just assert?
+                        }
+                        break;
+                    case 1:  //sample window:
+                        if (lcs->samp_snder) {
+                        } else {
+                            //std::fill(lcs->samples.begin(), lcs->samples.end(), GEOPM_SAMPLE_INVALID);
+                        }
+                        break;
+                }
+            }));
     }
 }
 
@@ -256,73 +314,83 @@ TEST_F(TreeCommunicatorTest, hello)
     }
 }
 
-TEST_F(TreeCommunicatorTest, send_policy_down_rank_0)
+TEST_F(TreeCommunicatorTest, send_policy_down)
 {
     int success;
     struct geopm_policy_message_s policy = {0};
     std::vector <struct geopm_policy_message_s> send_policy;
     size_t level;
-    int rank = 0;
-    int cart_rank = 0;
-    std::vector<int> level_ranks = {0, 0};
+    std::vector<int> ranks = {0, 8, 15};
+    std::vector<int> cart_ranks = {0, 0, 15};
+    std::vector<std::vector<int> > all_level_ranks = {{0, 0}, {0, 1}, {7, 0}};
     std::vector<int> level_sizes = {8, 2};
-    std::vector<int> factor(2);
-    std::string td = "power_balancing";
-    std::string ld = "power_governing";
-    factor[0] = 2;
-    factor[1] = 8;
+    std::vector<int> factor = {2, 8};
 
-    m_ppn1_comm = new MockComm();
-    m_cart_comm = new MockComm();
-    m_level_comms.resize(2);
-    m_level_ctxs.resize(2);
-    for (level = 0; level < m_level_comms.size(); level++) {
-        m_level_comms[level] = new MockComm();
-    }
-
-    config_ppn1_comm(WORLD_SIZE, rank);
-    config_cart_comm(WORLD_SIZE, rank, cart_rank);
-    config_level_comms(level_sizes, level_ranks);
-
-    struct geopm_policy_message_s pm = {GEOPM_POLICY_MODE_PERF_BALANCE_DYNAMIC, 0xDEADBEEF, 5, 75500};
-    //EXPECT_CALL(*m_polctl, mode()).WillRepeatedly(testing::Return(GEOPM_POLICY_MODE_PERF_BALANCE_DYNAMIC));// not called...
-    //EXPECT_CALL(*m_polctl, frequency_mhz()).WillRepeatedly(testing::Return(1200));
-    //EXPECT_CALL(*m_polctl, tree_decider()).WillRepeatedly(testing::ReturnRef(td));
-    //EXPECT_CALL(*m_polctl, leaf_decider()).WillRepeatedly(testing::ReturnRef(ld));
-    //EXPECT_CALL(*m_polctl, budget_watts()).WillRepeatedly(testing::Return(75500));
-    EXPECT_CALL(*m_polctl, policy_message(testing::_)).WillRepeatedly(testing::SetArgReferee<0>(pm));
-
-    m_tcomm = new geopm::TreeCommunicator(factor, m_polctl, m_ppn1_comm);
-
-    for (level = m_tcomm->num_level() - 1; level > 0; --level) {
-        if (level == m_tcomm->root_level()) {
-            m_tcomm->get_policy(level, policy);
-            policy.flags = m_tcomm->root_level();
+    ASSERT_EQ(ranks.size(), cart_ranks.size());
+    ASSERT_EQ(ranks.size(), all_level_ranks.size());
+    for (int i = 0; i < ranks.size(); i++) {
+        int rank = ranks[i];
+        int cart_rank = cart_ranks[i];
+        std::vector<int> level_ranks = all_level_ranks[i];
+        m_ppn1_comm = new MockComm();
+        m_cart_comm = new MockComm();
+        m_level_comms.resize(2);
+        m_level_ctxs.resize(2);
+        for (level = 0; level < m_level_comms.size(); level++) {
+            m_level_comms[level] = new MockComm();
         }
-        else {
-            success = 0;
-            while (!success) {
-                try {
-                    m_tcomm->get_policy(level, policy);
-                    EXPECT_EQ(m_tcomm->root_level(), (int)policy.flags);
-                    success = 1;
-                }
-                catch (geopm::Exception ex) {
-                    if (ex.err_value() != GEOPM_ERROR_POLICY_UNKNOWN) {
-                        throw ex;
+
+        config_ppn1_comm(WORLD_SIZE, rank);
+        config_cart_comm(WORLD_SIZE, rank, cart_rank);
+        config_level_comms(level_sizes, level_ranks);
+
+        if (!rank) {
+            //EXPECT_THROW(new geopm::TreeCommunicator(factor, NULL, m_ppn1_comm), geopm::Exception);
+            //delete m_ppn1_comm;
+            //m_ppn1_comm = new MockComm();
+            //config_ppn1_comm(WORLD_SIZE, rank);
+            m_tcomm = new geopm::TreeCommunicator(factor, m_polctl, m_ppn1_comm);
+            //EXPECT_THROW(new geopm::TreeCommunicator(factor, m_polctl, NULL), geopm::Exception);
+        } else {
+            //EXPECT_THROW(new geopm::TreeCommunicator(factor, m_polctl, m_ppn1_comm), geopm::Exception);
+            //delete m_ppn1_comm;
+            //m_ppn1_comm = new MockComm();
+            //config_ppn1_comm(WORLD_SIZE, rank);
+            m_tcomm = new geopm::TreeCommunicator(factor, NULL, m_ppn1_comm);
+        }
+
+        for (level = m_tcomm->num_level() - 1; level > 0; --level) {
+            if (level == m_tcomm->root_level()) {
+                m_tcomm->get_policy(level, policy);
+                policy.flags = m_tcomm->root_level();
+            }
+            else {
+                success = 0;
+                while (!success) {
+                    try {
+                        m_tcomm->get_policy(level, policy);
+                        EXPECT_EQ(m_tcomm->root_level(), (int)policy.flags);
+                        success = 1;
+                    }
+                    catch (geopm::Exception ex) {
+                        if (ex.err_value() != GEOPM_ERROR_POLICY_UNKNOWN) {
+                            throw ex;
+                        }
                     }
                 }
             }
+            if (level) {
+                send_policy.resize(m_tcomm->level_size(level - 1));
+                std::fill(send_policy.begin(), send_policy.end(), policy);
+                m_tcomm->send_policy(level - 1, send_policy);
+            } else {
+                // expect_throw tests
+            }
         }
-        if (level) {
-            send_policy.resize(m_tcomm->level_size(level - 1));
-            fill(send_policy.begin(), send_policy.end(), policy);
-            m_tcomm->send_policy(level - 1, send_policy);
-        }
-    }
 
-    delete m_tcomm;
-    delete m_ppn1_comm;
+        delete m_tcomm;
+        delete m_ppn1_comm;
+    }
 }
 
 TEST_F(TreeCommunicatorTest, send_policy_down_rank_8)
