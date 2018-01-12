@@ -30,6 +30,7 @@
 #
 
 check_PROGRAMS += test/geopm_test
+check_LTLIBRARIES += test/libgeopm_mock_mpi.la
 
 if ENABLE_MPI
     check_PROGRAMS += test/geopm_mpi_test
@@ -195,13 +196,13 @@ GTEST_TESTS = test/gtest_links/PlatformFactoryTest.platform_register \
               test/gtest_links/RuntimeRegulatorTest.all_reenter \
               test/gtest_links/RuntimeRegulatorTest.one_rank_reenter_and_exit \
               test/gtest_links/RuntimeRegulatorTest.config_rank_then_workers \
-              # end
+			  test/gtest_links/TreeCommunicatorTest.hello \
+			  test/gtest_links/TreeCommunicatorTest.send_policy_down \
+			  test/gtest_links/TreeCommunicatorTest.send_sample_up \
+			  # end
 
 if ENABLE_MPI
-GTEST_TESTS += test/gtest_links/MPITreeCommunicatorTest.hello \
-               test/gtest_links/MPITreeCommunicatorTest.send_policy_down \
-               test/gtest_links/MPITreeCommunicatorTest.send_sample_up \
-               test/gtest_links/MPIInterfaceTest.geopm_api \
+GTEST_TESTS += test/gtest_links/MPIInterfaceTest.geopm_api \
                test/gtest_links/MPIInterfaceTest.mpi_api \
                # end
 endif
@@ -211,7 +212,6 @@ TESTS += $(GTEST_TESTS) \
          # end
 
 EXTRA_DIST += test/geopm_test.sh \
-              test/MPITreeCommunicatorTest.cpp \
               test/MPIInterfaceTest.cpp \
               test/no_omp_cpu.c \
               test/pmpi_mock.c \
@@ -220,7 +220,10 @@ EXTRA_DIST += test/geopm_test.sh \
               test/legacy_whitelist.out \
               # end
 
+test_libgeopm_mock_mpi_la_SOURCES = test/geopm_mock_mpi.cpp
+
 test_geopm_test_SOURCES = test/geopm_test.cpp \
+                          src/TreeCommunicator.cpp \
                           test/PlatformFactoryTest.cpp \
                           test/PlatformImpTest.cpp \
                           test/PlatformTest.cpp \
@@ -253,6 +256,7 @@ test_geopm_test_SOURCES = test/geopm_test.cpp \
                           test/SharedMemoryTest.cpp \
                           test/EnvironmentTest.cpp \
                           test/SchedTest.cpp \
+                          test/TreeCommunicatorTest.cpp \
                           test/ControlMessageTest.cpp \
                           test/CommMPIImpTest.cpp \
                           test/PlatformIOTest.cpp \
@@ -269,9 +273,13 @@ test_geopm_test_LDADD = libgtest.a \
                         libgeopmpolicy.la \
                         # end
 
+# -module required to force .so generation of plugin.
+test_libgeopm_mock_mpi_la_LDFLAGS = $(AM_LDFLAGS) -version-info 0:0:0#-module
+
 test_geopm_test_CPPFLAGS = $(AM_CPPFLAGS) -Iplugin
 test_geopm_test_CFLAGS = $(AM_CFLAGS)
 test_geopm_test_CXXFLAGS = $(AM_CXXFLAGS)
+test_geopm_test_LDFLAGS = $(AM_LDFLAGS) -lgeopm_mock_mpi
 
 if GEOPM_DISABLE_NULL_PTR
     test_geopm_test_CFLAGS += -fno-delete-null-pointer-checks
@@ -286,7 +294,6 @@ endif
 
 if ENABLE_MPI
     test_geopm_mpi_test_SOURCES = test/geopm_mpi_test.cpp \
-                                  test/MPITreeCommunicatorTest.cpp \
                                   # end
 
     test_geopm_mpi_test_api_SOURCES = test/geopm_test.cpp \

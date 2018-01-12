@@ -33,10 +33,12 @@ plugin/AdaptiveFreqRegion.cpp
 plugin/AdaptiveFreqRegion.hpp
 plugin/BalancingDecider.cpp
 plugin/BalancingDecider.hpp
+plugin/geopm_mock_mpi.cpp
 plugin/GoverningDecider.cpp
 plugin/GoverningDeciderRegister.cpp
 plugin/GoverningDecider.hpp
 plugin/Makefile.mk
+plugin/mpi.h
 plugin/MPIComm.cpp
 plugin/MPIComm.hpp
 plugin/MPICommRegister.cpp
@@ -169,6 +171,7 @@ test/geopm_static_modes_test.cpp
 test/geopm_static_modes_test.sh
 test/geopm_test.cpp
 test/geopm_test.sh
+test/geopm_mock_mpi.cpp
 test/GlobalPolicyTest.cpp
 test/googletest.mk
 test/GoverningDeciderTest.cpp
@@ -203,8 +206,8 @@ test/MockPlatformTopology.hpp
 test/MockPolicy.hpp
 test/MockProfileSampler.hpp
 test/MockRegion.hpp
+test/mpi.h
 test/MPIInterfaceTest.cpp
-test/MPITreeCommunicatorTest.cpp
 test/MSRIOTest.cpp
 test/MSRTest.cpp
 test/no_omp_cpu.c
@@ -227,6 +230,7 @@ test/SampleRegulatorTest.cpp
 test/SchedTest.cpp
 test/SharedMemoryTest.cpp
 test/SimpleFreqDeciderTest.cpp
+test/TreeCommunicatorTest.cpp
 tracker/track
 .travis_obs.sh
 .travis.yml

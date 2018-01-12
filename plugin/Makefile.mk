@@ -38,6 +38,11 @@ libgeopmpi_mpi_la_SOURCES = src/MPICommSplit.cpp \
                             # end
 endif
 
+pkglib_LTLIBRARIES += libgeopm_mock_mpi.la
+libgeopm_mock_mpi_la_SOURCES = plugin/geopm_mock_mpi.cpp \
+							   plugin/mpi.h \
+							   # end
+
 pkglib_LTLIBRARIES += libgeopmpi_governing.la
 libgeopmpi_governing_la_SOURCES = plugin/GoverningDecider.cpp \
                                   plugin/GoverningDeciderRegister.cpp \
@@ -65,6 +70,7 @@ libgeopmpi_mpi_la_CXXFLAGS = $(AM_CXXFLAGS) $(MPI_CXXFLAGS)
 libgeopmpi_mpi_la_LDFLAGS = $(AM_LDFLAGS) $(MPI_LDFLAGS) -module
 libgeopmpi_mpi_la_LIBADD = libgeopm.la $(MPI_CLIBS)
 endif
+libgeopm_mock_mpi_la_LDFLAGS = $(AM_LDFLAGS) -module
 libgeopmpi_governing_la_LDFLAGS = $(AM_LDFLAGS) -module
 libgeopmpi_governing_la_LIBADD = libgeopm.la
 libgeopmpi_balancing_la_LDFLAGS = $(AM_LDFLAGS) -module

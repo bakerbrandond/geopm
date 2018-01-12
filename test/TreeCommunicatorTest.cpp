@@ -40,20 +40,15 @@
 
 #include "gtest/gtest.h"
 #include "TreeCommunicator.hpp"
-#include "Controller.hpp"
 #include "GlobalPolicy.hpp"
 #include "geopm_policy.h"
 #include "Exception.hpp"
 
-#ifndef NAME_MAX
-#define NAME_MAX 256
-#endif
-
-class MPITreeCommunicatorTest: public :: testing :: Test
+class TreeCommunicatorTest: public :: testing :: Test
 {
     public:
-        MPITreeCommunicatorTest();
-        ~MPITreeCommunicatorTest();
+        TreeCommunicatorTest();
+        ~TreeCommunicatorTest();
     protected:
         geopm::TreeCommunicator *m_tcomm;
         geopm::GlobalPolicy *m_polctl;
@@ -61,7 +56,7 @@ class MPITreeCommunicatorTest: public :: testing :: Test
 };
 
 
-MPITreeCommunicatorTest::MPITreeCommunicatorTest()
+TreeCommunicatorTest::TreeCommunicatorTest()
     : m_tcomm(NULL)
     , m_polctl(NULL)
     , m_ctl_path("/tmp/MPIControllerTest.hello.control")
@@ -82,7 +77,7 @@ MPITreeCommunicatorTest::MPITreeCommunicatorTest()
 }
 
 
-MPITreeCommunicatorTest::~MPITreeCommunicatorTest()
+TreeCommunicatorTest::~TreeCommunicatorTest()
 {
     if (m_polctl) {
         unlink(m_ctl_path.c_str());
@@ -92,7 +87,7 @@ MPITreeCommunicatorTest::~MPITreeCommunicatorTest()
 }
 
 
-TEST_F(MPITreeCommunicatorTest, hello)
+TEST_F(TreeCommunicatorTest, hello)
 {
     EXPECT_EQ(1, m_tcomm->num_level() > 0 && m_tcomm->num_level() <= 3);
     EXPECT_EQ(1, m_tcomm->root_level() == 2);
@@ -101,11 +96,12 @@ TEST_F(MPITreeCommunicatorTest, hello)
     EXPECT_EQ(1, m_tcomm->level_size(2) == 1);
 }
 
-TEST_F(MPITreeCommunicatorTest, send_policy_down)
+TEST_F(TreeCommunicatorTest, send_policy_down)
 {
     int success;
     struct geopm_policy_message_s policy = {0};
     std::vector <struct geopm_policy_message_s> send_policy;
+    setenv("MPI_Win_lock", "0", 1);
 
     for (int level = m_tcomm->num_level() - 1; level > 0; --level) {
         if (level == m_tcomm->root_level()) {
@@ -135,11 +131,12 @@ TEST_F(MPITreeCommunicatorTest, send_policy_down)
     }
 }
 
-TEST_F(MPITreeCommunicatorTest, send_sample_up)
+TEST_F(TreeCommunicatorTest, send_sample_up)
 {
     int success;
     std::vector <struct geopm_sample_message_s> sample;
     struct geopm_sample_message_s send_sample = {0};
+    setenv("MPI_Win_lock", "1", 1);
 
     int num_level = m_tcomm->num_level();
     if (m_tcomm->root_level() == num_level - 1) {
