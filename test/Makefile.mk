@@ -30,7 +30,6 @@
 #
 
 check_PROGRAMS += test/geopm_test
-check_LTLIBRARIES += test/libgeopm_mock_mpi.la
 
 if ENABLE_MPI
     check_PROGRAMS += test/geopm_mpi_test
@@ -220,9 +219,9 @@ EXTRA_DIST += test/geopm_test.sh \
               test/legacy_whitelist.out \
               # end
 
-test_libgeopm_mock_mpi_la_SOURCES = test/geopm_mock_mpi.cpp
-
 test_geopm_test_SOURCES = test/geopm_test.cpp \
+                          test/geopm_mock_mpi.cpp \
+                          test/mpi.h \
                           src/TreeCommunicator.cpp \
                           test/PlatformFactoryTest.cpp \
                           test/PlatformImpTest.cpp \
@@ -273,13 +272,10 @@ test_geopm_test_LDADD = libgtest.a \
                         libgeopmpolicy.la \
                         # end
 
-# -module required to force .so generation of plugin.
-test_libgeopm_mock_mpi_la_LDFLAGS = $(AM_LDFLAGS) -version-info 0:0:0#-module
-
 test_geopm_test_CPPFLAGS = $(AM_CPPFLAGS) -Iplugin
 test_geopm_test_CFLAGS = $(AM_CFLAGS)
 test_geopm_test_CXXFLAGS = $(AM_CXXFLAGS)
-test_geopm_test_LDFLAGS = $(AM_LDFLAGS) -lgeopm_mock_mpi
+test_geopm_test_LDFLAGS = $(AM_LDFLAGS)
 
 if GEOPM_DISABLE_NULL_PTR
     test_geopm_test_CFLAGS += -fno-delete-null-pointer-checks

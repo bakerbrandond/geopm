@@ -33,12 +33,10 @@ plugin/AdaptiveFreqRegion.cpp
 plugin/AdaptiveFreqRegion.hpp
 plugin/BalancingDecider.cpp
 plugin/BalancingDecider.hpp
-plugin/geopm_mock_mpi.cpp
 plugin/GoverningDecider.cpp
 plugin/GoverningDeciderRegister.cpp
 plugin/GoverningDecider.hpp
 plugin/Makefile.mk
-plugin/mpi.h
 plugin/MPIComm.cpp
 plugin/MPIComm.hpp
 plugin/MPICommRegister.cpp
