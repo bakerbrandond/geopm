@@ -174,6 +174,14 @@ namespace geopm
             virtual void epoch(void) = 0;
             virtual void shutdown(void) = 0;
             virtual IProfileThreadTable *tprof_table(void) = 0;
+            virtual void config_prof_comm(void) = 0;
+            virtual void config_ctl_shm(void) = 0;
+            virtual void config_ctl_msg(void) = 0;
+            virtual void config_cpu_affinity(void) = 0;
+            virtual void config_tprof_shm(void) = 0;
+            virtual void config_tprof_table(void) = 0;
+            virtual void config_table_shm(void) = 0;
+            virtual void config_table(void) = 0;
     };
 
     class IProfileRankSampler
@@ -212,6 +220,11 @@ namespace geopm
     class Profile : public IProfile
     {
         public:
+            /// @brief Profile constructor for testing facilitation.
+            Profile(const std::string prof_name, double overhead_frac, IProfileThreadTable *prof_table, ISharedMemoryUser *tprof_shmem, std::unique_ptr<IProfileTable> table, ISharedMemoryUser *table_shmem,
+                    std::unique_ptr<ISampleScheduler> scheduler, std::unique_ptr<IControlMessage> ctl_msg, ISharedMemoryUser *ctl_shmem, std::shared_ptr<IComm> comm);
+            Profile(const std::string prof_name, double overhead_frac);
+
             /// @brief Profile constructor.
             ///
             /// The Profile object is used by the application to
@@ -238,9 +251,6 @@ namespace geopm
             ///        consume the output from each rank running on
             ///        the compute node.
             Profile(const std::string prof_name, const IComm *comm);
-            /// @brief Profile constructor for testing facilitation.
-            Profile(const std::string prof_name, IProfileThreadTable *prof_table, ISharedMemoryUser *tprof_shmem, std::unique_ptr<IProfileTable> table, ISharedMemoryUser *table_shmem,
-                    std::unique_ptr<ISampleScheduler> scheduler, std::unique_ptr<IControlMessage> ctl_msg, ISharedMemoryUser *ctl_shmem, std::shared_ptr<IComm> comm);
             /// @brief Profile destructor, virtual.
             virtual ~Profile();
             uint64_t region(const std::string region_name, long hint) override;
@@ -250,6 +260,14 @@ namespace geopm
             void epoch(void) override;
             void shutdown(void) override;
             IProfileThreadTable *tprof_table(void) override;
+            void config_prof_comm(void) override;
+            void config_ctl_shm(void) override;
+            void config_ctl_msg(void) override;
+            void config_cpu_affinity(void) override;
+            void config_tprof_shm(void) override;
+            void config_tprof_table(void) override;
+            void config_table_shm(void) override;
+            void config_table(void) override;
         protected:
             enum m_profile_const_e {
                 M_PROF_SAMPLE_PERIOD = 1,
@@ -287,6 +305,8 @@ namespace geopm
             ///        report created.
             void print(const std::string file_name, int verbosity);
             bool m_is_enabled;
+            /// @brief holds the string name used to create SharedMemory.
+            std::string m_key;
             /// @brief holds the string name of the profile.
             std::string m_prof_name;
             /// @brief Holds the 64 bit unique region identifier

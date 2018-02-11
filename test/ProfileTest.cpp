@@ -47,14 +47,16 @@
 #include "MockSampleScheduler.hpp"
 #include "MockControlMessage.hpp"
 
+using geopm::Exception;
 using geopm::Profile;
 using geopm::IProfileThreadTable;
+using geopm::ISharedMemory;
+using geopm::SharedMemory;
 using geopm::ISharedMemoryUser;
+using geopm::SharedMemoryUser;
 using geopm::IProfileTable;
-using geopm::ISharedMemoryUser;
 using geopm::ISampleScheduler;
 using geopm::IControlMessage;
-using geopm::ISharedMemoryUser;
 
 class ProfileTestControlMessage : public MockControlMessage
 {
@@ -93,12 +95,12 @@ class ProfileTestProfileTable : public MockProfileTable
 class ProfileTestComm : public MockComm
 {
     public:
-        void config_ppn1_comm(int ppn1_rank, std::shared_ptr<MockComm> cart_comm)
+        void config_world_comm(int world_rank, std::shared_ptr<MockComm> shm_comm)
         {
             EXPECT_CALL(*this, rank())
-                .WillRepeatedly(testing::Return(ppn1_rank));
-            EXPECT_CALL(*this, split(testing::Matcher<const std::string &>(testing::_), testing::_))
-                .WillOnce(testing::Return(cart_comm));
+                .WillRepeatedly(testing::Return(world_rank));
+            EXPECT_CALL(*this, split("prof", IComm::M_COMM_SPLIT_TYPE_SHARED))
+                .WillOnce(testing::Return(shm_comm));
             EXPECT_CALL(*this, barrier())
                 .WillRepeatedly(testing::Return());
         }
@@ -123,11 +125,13 @@ class ProfileTest : public :: testing :: Test
         ProfileTest();
         ~ProfileTest();
     protected:
-        const std::string m_shm_key;
+        const std::string M_SHM_KEY;
+        const std::string M_PROF_NAME;
         const size_t M_SHMEM_REGION_SIZE;
         const size_t M_SHM_SIZE;
+        const double M_OVERHEAD_FRAC;
         std::vector<int> m_rank;
-        std::shared_ptr<ProfileTestComm> m_ppn1_comm;
+        std::shared_ptr<ProfileTestComm> m_world_comm;
         std::shared_ptr<ProfileTestComm> m_shm_comm;
         std::unique_ptr<ProfileTestProfileTable> m_table;
         std::unique_ptr<ProfileTestSampleScheduler> m_scheduler;
@@ -137,9 +141,11 @@ class ProfileTest : public :: testing :: Test
 };
 
 ProfileTest::ProfileTest()
-    : m_shm_key (std::string(geopm_env_shmkey()) + "-sample")
+    : M_SHM_KEY (std::string(geopm_env_shmkey()))
+    , M_PROF_NAME ("profile_test")
     , M_SHMEM_REGION_SIZE (12288)
     , M_SHM_SIZE (2)
+    , M_OVERHEAD_FRAC (0.01)
     , m_rank ({0, 1})
 {
 }
@@ -150,15 +156,15 @@ ProfileTest::~ProfileTest()
 
 TEST_F(ProfileTest, hello)
 {
-    for (auto ppn1_rank : m_rank) {
+    for (auto world_rank : m_rank) {
         for (auto shm_rank : m_rank) {
             bool test_result = true;
             m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable());
             m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
             m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
-            m_ppn1_comm = std::make_shared<ProfileTestComm>();
+            m_world_comm = std::make_shared<ProfileTestComm>();
             m_shm_comm = std::make_shared<ProfileTestComm>();
-            m_ppn1_comm->config_ppn1_comm(ppn1_rank, m_shm_comm);
+            m_world_comm->config_world_comm(world_rank, m_shm_comm);
             m_shm_comm->config_shm_comm(shm_rank, M_SHM_SIZE, test_result);
             std::string region_name = "test_region_name";
             uint64_t expected_rid = 3780331735;
@@ -168,21 +174,33 @@ TEST_F(ProfileTest, hello)
                 return expected_rid;
             };
             double prog_fraction = 0.0;
-            auto insert_lambda = [ppn1_rank, &expected_rid, &prog_fraction] (uint64_t key, const struct geopm_prof_message_s &value)
+            auto insert_lambda = [world_rank, &expected_rid, &prog_fraction] (uint64_t key, const struct geopm_prof_message_s &value)
             {
                 EXPECT_EQ(expected_rid, key);
-                EXPECT_EQ(ppn1_rank, value.rank);
+                EXPECT_EQ(world_rank, value.rank);
                 EXPECT_EQ(expected_rid, value.region_id);
                 EXPECT_EQ(prog_fraction, value.progress);
             };
             m_table->config(region_name, expected_rid, key_lambda, insert_lambda);
             m_scheduler->config();
-            m_profile = std::make_shared<Profile>("profile_test", (IProfileThreadTable *) NULL, (ISharedMemoryUser *) NULL,
-                    std::move(m_table), (ISharedMemoryUser *) NULL, std::move(m_scheduler), std::move(m_ctl_msg), (ISharedMemoryUser *) NULL, m_ppn1_comm);
+            std::cerr << "making rank " << world_rank << " profile" << std::endl;
+            m_profile = std::make_shared<Profile>(M_PROF_NAME, M_OVERHEAD_FRAC, (IProfileThreadTable *) NULL, (ISharedMemoryUser *) NULL, std::move(m_table), (ISharedMemoryUser *) NULL,
+            std::move(m_scheduler), std::move(m_ctl_msg), (ISharedMemoryUser *) NULL, m_world_comm);
+            //m_profile->config_prof_comm();
+            //EXPECT_THROW(m_profile->config_prof_comm(), Exception);
+            //auto shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-sample", M_SHMEM_REGION_SIZE));
+            //m_profile->config_prof_comm();
+            //m_profile->config_ctl_shm();
+            //m_profile->config_ctl_msg();
+            //m_profile->config_cpu_affinity();
+            //m_profile->config_tprof_shm();
+            //m_profile->config_tprof_table();
+            //m_profile->config_table_shm();
+            //m_profile->config_table();
             long hint = 0;
             uint64_t rid = m_profile->region(region_name, hint);
             EXPECT_EQ(expected_rid, rid);
-            m_profile->enter(rid);// TODO was expecting this to throw (entry before epoch)
+            m_profile->enter(rid);
             expected_rid = GEOPM_REGION_ID_EPOCH;
             m_profile->epoch();
             expected_rid = 3780331735;
@@ -196,6 +214,7 @@ TEST_F(ProfileTest, hello)
             m_profile.reset();
         }
     }
+    std::cerr << "OK, really ran" << std::endl;
 }
 
 #if 0
