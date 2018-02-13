@@ -35,10 +35,12 @@
 //#include <sys/mman.h>
 //#include <sys/stat.h>
 //#include <fcntl.h>
+#include <sstream>
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 #include "geopm_env.h"
+#include "geopm_sched.h"
 #include "Profile.hpp"
 #include "Exception.hpp"
 #include "SharedMemory.hpp"
@@ -46,6 +48,7 @@
 #include "MockProfileTable.hpp"
 #include "MockSampleScheduler.hpp"
 #include "MockControlMessage.hpp"
+#include "MockSharedMemoryUser.hpp"
 
 using geopm::Exception;
 using geopm::Profile;
@@ -58,6 +61,33 @@ using geopm::IProfileTable;
 using geopm::ISampleScheduler;
 using geopm::IControlMessage;
 
+struct free_delete
+{
+    void operator()(void* x)
+    {
+        free(x);
+    }
+};
+
+class ProfileTestSharedMemoryUser : public MockSharedMemoryUser
+{
+    protected:
+        std::unique_ptr<void, free_delete> m_buffer;
+    public:
+        ProfileTestSharedMemoryUser()
+        {
+        }
+
+        ProfileTestSharedMemoryUser(size_t size)
+        {
+            m_buffer = std::unique_ptr<void, free_delete>(malloc(size));
+            EXPECT_CALL(*this, size())
+                .WillRepeatedly(testing::Return(size));
+            EXPECT_CALL(*this, pointer())
+                .WillRepeatedly(testing::Return(m_buffer.get()));
+        }
+};
+
 class ProfileTestControlMessage : public MockControlMessage
 {
     public:
@@ -67,6 +97,10 @@ class ProfileTestControlMessage : public MockControlMessage
                 .WillRepeatedly(testing::Return());
             EXPECT_CALL(*this, wait())
                 .WillRepeatedly(testing::Return());
+            EXPECT_CALL(*this, cpu_rank(testing::_, testing::_))// TODO do we care about these inputs or are they integration-y
+                .WillRepeatedly(testing::Return());
+            EXPECT_CALL(*this, cpu_rank(testing::_))// TODO do we care about these inputs or are they integration-y
+                .WillRepeatedly(testing::Return(0));
         }
 };
 
@@ -141,7 +175,7 @@ class ProfileTest : public :: testing :: Test
 };
 
 ProfileTest::ProfileTest()
-    : M_SHM_KEY (std::string(geopm_env_shmkey()))
+    : M_SHM_KEY ("profilte_test_shm_key")
     , M_PROF_NAME ("profile_test")
     , M_SHMEM_REGION_SIZE (12288)
     , M_SHM_SIZE (2)
@@ -181,40 +215,62 @@ TEST_F(ProfileTest, hello)
                 EXPECT_EQ(expected_rid, value.region_id);
                 EXPECT_EQ(prog_fraction, value.progress);
             };
+            std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
             m_table->config(region_name, expected_rid, key_lambda, insert_lambda);
             m_scheduler->config();
-            std::cerr << "making rank " << world_rank << " profile" << std::endl;
-            m_profile = std::make_shared<Profile>(M_PROF_NAME, M_OVERHEAD_FRAC, (IProfileThreadTable *) NULL, (ISharedMemoryUser *) NULL, std::move(m_table), (ISharedMemoryUser *) NULL,
-            std::move(m_scheduler), std::move(m_ctl_msg), (ISharedMemoryUser *) NULL, m_world_comm);
-            //m_profile->config_prof_comm();
-            //EXPECT_THROW(m_profile->config_prof_comm(), Exception);
-            //auto shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-sample", M_SHMEM_REGION_SIZE));
-            //m_profile->config_prof_comm();
-            //m_profile->config_ctl_shm();
+
+            m_profile = std::make_shared<Profile>(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, /*std::shared_ptr<IProfileThreadTable>*/ nullptr,
+                    /*std::unique_ptr<ISharedMemoryUser>*/ nullptr, std::move(m_table),
+                    std::move(table_shmem), std::move(m_scheduler),
+                    std::move(m_ctl_msg), /*std::unique_ptr<ISharedMemoryUser>*/ nullptr,
+                    m_world_comm.get());
+            m_profile->config_prof_comm();
+            //EXPECT_THROW(m_profile->config_ctl_shm(), Exception);// TODO will need work to produce this throw
+            auto sample_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-sample", M_SHMEM_REGION_SIZE));
+            // TODO this call creates a real ControlMessage that attempts to step/wait on destruction
+            // either work around or simulate this step/wait interaction to fix induced hang
             //m_profile->config_ctl_msg();
-            //m_profile->config_cpu_affinity();
-            //m_profile->config_tprof_shm();
-            //m_profile->config_tprof_table();
-            //m_profile->config_table_shm();
-            //m_profile->config_table();
+            m_profile->config_cpu_affinity();
+            //EXPECT_THROW(m_profile->config_tprof_shm(), Exception);// TODO will need work to produce this throw
+            size_t tprof_shm_size = geopm_sched_num_cpu() * 64;
+            auto tprof_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-tprof", tprof_shm_size));
+            m_profile->config_tprof_table();// TODO size of memory area matters test negative case
+            std::ostringstream table_shm_key;
+            table_shm_key << M_SHM_KEY <<  "-sample-" << world_rank;
+            auto table_shm = std::unique_ptr<SharedMemory>(new SharedMemory(table_shm_key.str(), M_SHMEM_REGION_SIZE));
+            m_profile->config_table();
+
             long hint = 0;
             uint64_t rid = m_profile->region(region_name, hint);
+            // call region with a new string
+            // make it an mpi region for 2 birds
             EXPECT_EQ(expected_rid, rid);
             m_profile->enter(rid);
+            // call enter with new rid
             expected_rid = GEOPM_REGION_ID_EPOCH;
             m_profile->epoch();
             expected_rid = 3780331735;
             prog_fraction = 1.0;
             m_profile->exit(rid);
             prog_fraction = 90.0 / 100.0;
+            // m_scheduler do_sample return true
             m_profile->progress(rid, prog_fraction);
             m_profile->tprof_table();
             m_profile->shutdown();
+            m_profile->region(region_name, hint); // disabled
+            m_profile->enter(rid); // disabled
+            m_profile->exit(rid); // disabled
+            m_profile->progress(rid, prog_fraction); // disabled
 
             m_profile.reset();
+            sample_shm.reset();
+            tprof_shm.reset();
+            table_shm.reset();
+            // TODO enable region barriers in env
+            // TODO enable verbosity in env
+            // TODO make init_cpu_list public if GEOPM_TEST? only called in real constructor
         }
     }
-    std::cerr << "OK, really ran" << std::endl;
 }
 
 #if 0

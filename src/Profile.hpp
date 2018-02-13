@@ -40,6 +40,7 @@
 #include <set>
 #include <forward_list>
 #include <fstream>
+#include <memory>
 
 #include "geopm_time.h"
 #include "geopm_message.h"
@@ -173,7 +174,7 @@ namespace geopm
             /// application.
             virtual void epoch(void) = 0;
             virtual void shutdown(void) = 0;
-            virtual IProfileThreadTable *tprof_table(void) = 0;
+            virtual std::shared_ptr<IProfileThreadTable> tprof_table(void) = 0;
             virtual void config_prof_comm(void) = 0;
             virtual void config_ctl_shm(void) = 0;
             virtual void config_ctl_msg(void) = 0;
@@ -221,10 +222,11 @@ namespace geopm
     {
         public:
             /// @brief Profile constructor for testing facilitation.
-            Profile(const std::string prof_name, double overhead_frac, IProfileThreadTable *prof_table, ISharedMemoryUser *tprof_shmem, std::unique_ptr<IProfileTable> table, ISharedMemoryUser *table_shmem,
-                    std::unique_ptr<ISampleScheduler> scheduler, std::unique_ptr<IControlMessage> ctl_msg, ISharedMemoryUser *ctl_shmem, std::shared_ptr<IComm> comm);
-            Profile(const std::string prof_name, double overhead_frac);
-
+            Profile(const std::string &prof_name, const std::string &key, double overhead_frac, std::shared_ptr<IProfileThreadTable> prof_table,
+                    std::unique_ptr<ISharedMemoryUser> tprof_shmem, std::unique_ptr<IProfileTable> table,
+                    std::unique_ptr<ISharedMemoryUser> table_shmem, std::unique_ptr<ISampleScheduler> scheduler,
+                    std::unique_ptr<IControlMessage> ctl_msg, std::unique_ptr<ISharedMemoryUser> ctl_shmem,
+                    const IComm *comm);
             /// @brief Profile constructor.
             ///
             /// The Profile object is used by the application to
@@ -250,7 +252,7 @@ namespace geopm
             ///        geopm::Controller on each compute node will
             ///        consume the output from each rank running on
             ///        the compute node.
-            Profile(const std::string prof_name, const IComm *comm);
+            Profile(const std::string &prof_name, const IComm *comm);
             /// @brief Profile destructor, virtual.
             virtual ~Profile();
             uint64_t region(const std::string region_name, long hint) override;
@@ -259,7 +261,7 @@ namespace geopm
             void progress(uint64_t region_id, double fraction) override;
             void epoch(void) override;
             void shutdown(void) override;
-            IProfileThreadTable *tprof_table(void) override;
+            std::shared_ptr<IProfileThreadTable> tprof_table(void) override;
             void config_prof_comm(void) override;
             void config_ctl_shm(void) override;
             void config_ctl_msg(void) override;
@@ -306,7 +308,7 @@ namespace geopm
             void print(const std::string file_name, int verbosity);
             bool m_is_enabled;
             /// @brief holds the string name used to create SharedMemory.
-            std::string m_key;
+            const std::string M_SHM_KEY_BASE;
             /// @brief holds the string name of the profile.
             std::string m_prof_name;
             /// @brief Holds the 64 bit unique region identifier
@@ -320,24 +322,24 @@ namespace geopm
             int m_num_progress;
             /// @brief Holds the rank's current progress in the region.
             double m_progress;
-            /// @brief Holds a pointer to the shared memory region
-            ///        used for passing sample data to the geopm runtime.
-            void *m_table_buffer;
             /// @brief Attaches to the shared memory region for
             ///        control messages.
-            ISharedMemoryUser *m_ctl_shmem;
+            std::unique_ptr<ISharedMemoryUser> m_ctl_shmem;
             /// @brief Holds a pointer to the shared memory region
             ///        used to pass control messages to and from the geopm
             ///        runtime.
             std::unique_ptr<IControlMessage> m_ctl_msg;
             /// @brief Attaches to the shared memory region for
             ///        passing samples to the geopm runtime.
-            ISharedMemoryUser *m_table_shmem;
+            std::unique_ptr<ISharedMemoryUser> m_table_shmem;
+            /// @brief Holds a pointer to the shared memory region
+            ///        used for passing sample data to the geopm runtime.
+            void *m_table_buffer;
             /// @brief Hash table for sample messages contained in
             ///        shared memory.
             std::unique_ptr<IProfileTable> m_table;
-            ISharedMemoryUser *m_tprof_shmem;
-            IProfileThreadTable *m_tprof_table;
+            std::unique_ptr<ISharedMemoryUser> m_tprof_shmem;
+            std::shared_ptr<IProfileThreadTable> m_tprof_table;
             const double M_OVERHEAD_FRAC;
             std::unique_ptr<ISampleScheduler> m_scheduler;
             /// @brief Holds a list of cpus that the rank process is

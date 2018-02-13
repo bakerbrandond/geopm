@@ -287,6 +287,8 @@ test_geopm_test_SOURCES = test/geopm_test.cpp \
                           test/MockGlobalPolicy.hpp \
                           test/MockPlatformImp.hpp \
                           test/MockPlatformTopology.hpp \
+                          test/MockSharedMemory.hpp \
+                          test/MockSharedMemoryUser.hpp \
                           test/SharedMemoryTest.cpp \
                           test/EnvironmentTest.cpp \
                           test/SchedTest.cpp \
