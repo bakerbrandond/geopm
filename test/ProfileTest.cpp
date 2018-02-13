@@ -99,9 +99,9 @@ class ProfileTestControlMessage : public MockControlMessage
                 .WillRepeatedly(testing::Return());
             EXPECT_CALL(*this, wait())
                 .WillRepeatedly(testing::Return());
-            EXPECT_CALL(*this, cpu_rank(testing::_, testing::_))// TODO do we care about these inputs or are they integration-y
+            EXPECT_CALL(*this, cpu_rank(testing::_, testing::_))
                 .WillRepeatedly(testing::Return());
-            EXPECT_CALL(*this, cpu_rank(testing::_))// TODO do we care about these inputs or are they integration-y
+            EXPECT_CALL(*this, cpu_rank(testing::_))
                 .WillRepeatedly(testing::Return(0));
         }
 };
@@ -167,6 +167,8 @@ class ProfileTest : public :: testing :: Test
         const size_t M_SHMEM_REGION_SIZE;
         const size_t M_SHM_COMM_SIZE;
         const double M_OVERHEAD_FRAC;
+        const std::vector<uint64_t> m_expected_rid;
+        std::vector<std::string> m_region_names;
         std::vector<int> m_rank;
         std::shared_ptr<ProfileTestComm> m_world_comm;
         std::shared_ptr<ProfileTestComm> m_shm_comm;
@@ -183,6 +185,8 @@ ProfileTest::ProfileTest()
     , M_SHMEM_REGION_SIZE (12288)
     , M_SHM_COMM_SIZE (2)
     , M_OVERHEAD_FRAC (0.01)
+    , m_expected_rid({3780331735, 0})
+    , m_region_names({"test_region_name", "test_other_name"})
     , m_rank ({0, 1})
 {
 }
@@ -191,16 +195,57 @@ ProfileTest::~ProfileTest()
 {
 }
 
+TEST_F(ProfileTest, region)
+{
+    // need table to be configured to no-op
+    // call again after shutdown to test m_enable
+    int shm_rank = 0;
+    int world_rank = 0;
+    bool test_result = true; //TODO remove?
+    int idx = 0;
+    for (auto region_name : m_region_names) {
+        auto expected_rid = m_expected_rid[idx];
+        auto key_lambda = [region_name, expected_rid] (const std::string &name)
+        {
+            EXPECT_EQ(region_name, name);
+            return expected_rid;
+        };
+        auto insert_lambda = [] (uint64_t key, const struct geopm_prof_message_s &value)
+        {
+        };
+        std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
+        m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(region_name, expected_rid, key_lambda, insert_lambda));
+
+        // TODO these can be in Setup
+        m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
+        m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+        m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
+
+        m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, nullptr,
+                    nullptr, std::move(m_table),
+                    std::move(table_shmem), nullptr,
+                    std::move(m_ctl_msg), nullptr,
+                    m_world_comm.get()));
+        m_profile->config_prof_comm();
+        long hint = 0;
+        uint64_t rid = m_profile->region(region_name, hint);
+        // call region with a new string
+        // make it an mpi region for 2 birds
+        EXPECT_EQ(expected_rid, rid);
+        idx++;
+    }
+}
+
 TEST_F(ProfileTest, hello)
 {
+#if 0
     for (auto world_rank : m_rank) {
         for (auto shm_rank : m_rank) {
             bool test_result = true;
-            m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
             m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
             m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
-            std::string region_name = "test_region_name";
-            uint64_t expected_rid = 3780331735;
+            std::string region_name = ;
+            uint64_t expected_rid = ;
             auto key_lambda = [region_name, expected_rid] (const std::string &name)
             {
                 EXPECT_EQ(region_name, name);
@@ -267,14 +312,13 @@ TEST_F(ProfileTest, hello)
             sample_shm.reset();
             tprof_shm.reset();
             table_shm.reset();
-            // move most of this shit to constructor and make multiple fixtures
             // TODO enable region barriers in env
             // TODO enable verbosity in env
-            // TODO make init_cpu_list public if GEOPM_TEST? only called in real constructor
-            // TODO ditto for the config APIs, should they be in base class?  Seem imp specific
         }
     }
+#endif
 }
+
 class ProfileSamplerTest : public :: testing :: Test
 {
     public:

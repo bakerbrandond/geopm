@@ -175,14 +175,6 @@ namespace geopm
             virtual void epoch(void) = 0;
             virtual void shutdown(void) = 0;
             virtual std::shared_ptr<IProfileThreadTable> tprof_table(void) = 0;
-            virtual void config_prof_comm(void) = 0;
-            virtual void config_ctl_shm(void) = 0;
-            virtual void config_ctl_msg(void) = 0;
-            virtual void config_cpu_affinity(void) = 0;
-            virtual void config_tprof_shm(void) = 0;
-            virtual void config_tprof_table(void) = 0;
-            virtual void config_table_shm(void) = 0;
-            virtual void config_table(void) = 0;
     };
 
     class IProfileRankSampler
@@ -262,14 +254,14 @@ namespace geopm
             void epoch(void) override;
             void shutdown(void) override;
             std::shared_ptr<IProfileThreadTable> tprof_table(void) override;
-            void config_prof_comm(void) override;
-            void config_ctl_shm(void) override;
-            void config_ctl_msg(void) override;
-            void config_cpu_affinity(void) override;
-            void config_tprof_shm(void) override;
-            void config_tprof_table(void) override;
-            void config_table_shm(void) override;
-            void config_table(void) override;
+            void config_prof_comm(void);
+            void config_ctl_shm(void);
+            void config_ctl_msg(void);
+            void config_cpu_affinity(void);
+            void config_tprof_shm(void);
+            void config_tprof_table(void);
+            void config_table_shm(void);
+            void config_table(void);
         protected:
             enum m_profile_const_e {
                 M_PROF_SAMPLE_PERIOD = 1,
