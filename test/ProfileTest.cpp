@@ -85,6 +85,8 @@ class ProfileTestSharedMemoryUser : public MockSharedMemoryUser
                 .WillRepeatedly(testing::Return(size));
             EXPECT_CALL(*this, pointer())
                 .WillRepeatedly(testing::Return(m_buffer.get()));
+            EXPECT_CALL(*this, unlink())
+                .WillRepeatedly(testing::Return());
         }
 };
 
@@ -107,7 +109,7 @@ class ProfileTestControlMessage : public MockControlMessage
 class ProfileTestSampleScheduler : public MockSampleScheduler
 {
     public:
-        void config()
+        ProfileTestSampleScheduler()
         {
             EXPECT_CALL(*this, clear())
                 .WillRepeatedly(testing::Return());
@@ -117,7 +119,7 @@ class ProfileTestSampleScheduler : public MockSampleScheduler
 class ProfileTestProfileTable : public MockProfileTable
 {
     public:
-        void config(std::string region_name, uint64_t expected_rid, std::function<uint64_t (const std::string &)> key_lambda, std::function<void (uint64_t key, const struct geopm_prof_message_s &value)> insert_lambda)
+        ProfileTestProfileTable(std::string region_name, uint64_t expected_rid, std::function<uint64_t (const std::string &)> key_lambda, std::function<void (uint64_t key, const struct geopm_prof_message_s &value)> insert_lambda)
         {
             EXPECT_CALL(*this, key(testing::_))
                 .WillRepeatedly(testing::Invoke(key_lambda));
@@ -129,7 +131,8 @@ class ProfileTestProfileTable : public MockProfileTable
 class ProfileTestComm : public MockComm
 {
     public:
-        void config_world_comm(int world_rank, std::shared_ptr<MockComm> shm_comm)
+        // COMM_WORLD
+        ProfileTestComm(int world_rank, std::shared_ptr<MockComm> shm_comm)
         {
             EXPECT_CALL(*this, rank())
                 .WillRepeatedly(testing::Return(world_rank));
@@ -139,7 +142,7 @@ class ProfileTestComm : public MockComm
                 .WillRepeatedly(testing::Return());
         }
 
-        void config_shm_comm(int shm_rank, int shm_size, bool &test_result)
+        ProfileTestComm(int shm_rank, int shm_size, bool &test_result)
         {
             //rank, num_rank, barrier, test,
             EXPECT_CALL(*this, rank())
@@ -162,7 +165,7 @@ class ProfileTest : public :: testing :: Test
         const std::string M_SHM_KEY;
         const std::string M_PROF_NAME;
         const size_t M_SHMEM_REGION_SIZE;
-        const size_t M_SHM_SIZE;
+        const size_t M_SHM_COMM_SIZE;
         const double M_OVERHEAD_FRAC;
         std::vector<int> m_rank;
         std::shared_ptr<ProfileTestComm> m_world_comm;
@@ -171,14 +174,14 @@ class ProfileTest : public :: testing :: Test
         std::unique_ptr<ProfileTestSampleScheduler> m_scheduler;
         std::unique_ptr<ProfileTestControlMessage> m_ctl_msg;
 
-        std::shared_ptr<Profile> m_profile;
+        std::unique_ptr<Profile> m_profile;
 };
 
 ProfileTest::ProfileTest()
     : M_SHM_KEY ("profilte_test_shm_key")
     , M_PROF_NAME ("profile_test")
     , M_SHMEM_REGION_SIZE (12288)
-    , M_SHM_SIZE (2)
+    , M_SHM_COMM_SIZE (2)
     , M_OVERHEAD_FRAC (0.01)
     , m_rank ({0, 1})
 {
@@ -193,13 +196,9 @@ TEST_F(ProfileTest, hello)
     for (auto world_rank : m_rank) {
         for (auto shm_rank : m_rank) {
             bool test_result = true;
-            m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable());
-            m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
             m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
-            m_world_comm = std::make_shared<ProfileTestComm>();
-            m_shm_comm = std::make_shared<ProfileTestComm>();
-            m_world_comm->config_world_comm(world_rank, m_shm_comm);
-            m_shm_comm->config_shm_comm(shm_rank, M_SHM_SIZE, test_result);
+            m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+            m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
             std::string region_name = "test_region_name";
             uint64_t expected_rid = 3780331735;
             auto key_lambda = [region_name, expected_rid] (const std::string &name)
@@ -216,19 +215,21 @@ TEST_F(ProfileTest, hello)
                 EXPECT_EQ(prog_fraction, value.progress);
             };
             std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
-            m_table->config(region_name, expected_rid, key_lambda, insert_lambda);
-            m_scheduler->config();
+            m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(region_name, expected_rid, key_lambda, insert_lambda));
+            m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
 
-            m_profile = std::make_shared<Profile>(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, /*std::shared_ptr<IProfileThreadTable>*/ nullptr,
+            m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, /*std::shared_ptr<IProfileThreadTable>*/ nullptr,
                     /*std::unique_ptr<ISharedMemoryUser>*/ nullptr, std::move(m_table),
                     std::move(table_shmem), std::move(m_scheduler),
-                    std::move(m_ctl_msg), /*std::unique_ptr<ISharedMemoryUser>*/ nullptr,
-                    m_world_comm.get());
+                    std::move(m_ctl_msg), std::unique_ptr<ProfileTestSharedMemoryUser>(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE)),
+                    m_world_comm.get()));
             m_profile->config_prof_comm();
             //EXPECT_THROW(m_profile->config_ctl_shm(), Exception);// TODO will need work to produce this throw
             auto sample_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-sample", M_SHMEM_REGION_SIZE));
+            m_profile->config_ctl_shm();
             // TODO this call creates a real ControlMessage that attempts to step/wait on destruction
             // either work around or simulate this step/wait interaction to fix induced hang
+            // create fixture that forks creating a profile and profile sampler?
             //m_profile->config_ctl_msg();
             m_profile->config_cpu_affinity();
             //EXPECT_THROW(m_profile->config_tprof_shm(), Exception);// TODO will need work to produce this throw
@@ -266,13 +267,32 @@ TEST_F(ProfileTest, hello)
             sample_shm.reset();
             tprof_shm.reset();
             table_shm.reset();
+            // move most of this shit to constructor and make multiple fixtures
             // TODO enable region barriers in env
             // TODO enable verbosity in env
             // TODO make init_cpu_list public if GEOPM_TEST? only called in real constructor
+            // TODO ditto for the config APIs, should they be in base class?  Seem imp specific
         }
     }
 }
+class ProfileSamplerTest : public :: testing :: Test
+{
+    public:
+        ProfileSamplerTest();
+        ~ProfileSamplerTest();
+};
 
+ProfileSamplerTest::ProfileSamplerTest()
+{
+}
+
+ProfileSamplerTest::~ProfileSamplerTest()
+{
+}
+
+TEST_F(ProfileSamplerTest, hello)
+{
+}
 #if 0
 class MPIProfileTest: public :: testing :: Test
 {

@@ -141,6 +141,8 @@ namespace geopm
 #endif
         config_prof_comm();
 
+        config_ctl_shm();
+
         config_ctl_msg();
 
         init_cpu_list();
@@ -190,8 +192,6 @@ namespace geopm
 
     void Profile::config_ctl_msg(void)
     {
-        config_ctl_shm();
-
         m_shm_comm->barrier();
         if (!m_shm_rank) {
             m_ctl_shmem->unlink();
