@@ -62,11 +62,6 @@ using geopm::IProfileTable;
 using geopm::ISampleScheduler;
 using geopm::IControlMessage;
 
-extern "C"
-{
-    void geopm_env_load(void);
-}
-
 struct free_delete
 {
     void operator()(void* x)
@@ -160,7 +155,7 @@ class ProfileTestComm : public MockComm
                 .WillRepeatedly(testing::Return());
         }
 
-        ProfileTestComm(int shm_rank, int shm_size, bool &test_result)
+        ProfileTestComm(int shm_rank, int shm_size)
         {
             //rank, num_rank, barrier, test,
             EXPECT_CALL(*this, rank())
@@ -170,7 +165,7 @@ class ProfileTestComm : public MockComm
             EXPECT_CALL(*this, barrier())
                 .WillRepeatedly(testing::Return());
             EXPECT_CALL(*this, test(testing::_))
-                .WillRepeatedly(testing::Return(testing::ByRef(test_result)));
+                .WillRepeatedly(testing::Return(true));
         }
 };
 
@@ -217,11 +212,12 @@ ProfileTest::~ProfileTest()
 {
 }
 
+// TODO cleanup env var in destructor
+// TODO fixtures need to either create shared mem user mock OR config_*_shm() call, not both
 TEST_F(ProfileTest, region)
 {
     int shm_rank = 0;
     int world_rank = 0;
-    bool test_result = true; //TODO remove?
     int idx = 0;
     for (auto region_name : m_region_names) {
         auto expected_rid = m_expected_rid[idx];
@@ -237,7 +233,7 @@ TEST_F(ProfileTest, region)
         m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
 
         m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
-        m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+        m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE);
         m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
         m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
 
@@ -260,7 +256,6 @@ TEST_F(ProfileTest, enter_exit)
 {
     int shm_rank = 0;
     int world_rank = 0;
-    bool test_result = true; //TODO remove?
     std::string region_name;
     uint64_t expected_rid;
     double prog_fraction;
@@ -285,7 +280,7 @@ TEST_F(ProfileTest, enter_exit)
         .WillRepeatedly(testing::Return());
 
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
-    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE);
     m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
     m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
 
@@ -325,7 +320,6 @@ TEST_F(ProfileTest, progress)
 {
     int shm_rank = 0;
     int world_rank = 0;
-    bool test_result = true; //TODO remove?
     std::string region_name;
     uint64_t expected_rid;
     double prog_fraction;
@@ -347,7 +341,7 @@ TEST_F(ProfileTest, progress)
     m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
 
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
-    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE);
     m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
     m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
     EXPECT_CALL(*m_scheduler, record_exit())
@@ -373,7 +367,6 @@ TEST_F(ProfileTest, epoch)
 {
     int shm_rank = 0;
     int world_rank = 0;
-    bool test_result = true; //TODO remove?
     std::string region_name;
     uint64_t expected_rid = GEOPM_REGION_ID_EPOCH;
     double prog_fraction = 0.0;
@@ -395,7 +388,7 @@ TEST_F(ProfileTest, epoch)
     m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
 
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
-    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE);
     m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
     m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
 
@@ -412,7 +405,6 @@ TEST_F(ProfileTest, shutdown)
 {
     int shm_rank = 0;
     int world_rank = 0;
-    bool test_result = true; //TODO remove?
 
     auto key_lambda = [] (const std::string &name)
     {
@@ -426,7 +418,7 @@ TEST_F(ProfileTest, shutdown)
     m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
 
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
-    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE);
     m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
     m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
 
@@ -450,7 +442,6 @@ TEST_F(ProfileTest, tprof_table)
 {
     int shm_rank = 0;
     int world_rank = 0;
-    bool test_result = true; //TODO remove?
     std::string region_name;
     uint64_t expected_rid = GEOPM_REGION_ID_EPOCH;
     double prog_fraction = 0.0;
@@ -473,7 +464,7 @@ TEST_F(ProfileTest, tprof_table)
     m_tprof = std::unique_ptr<ProfileTestProfileThreadTable>(new ProfileTestProfileThreadTable());
 
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
-    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE);
     m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
     m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
 
@@ -490,7 +481,6 @@ TEST_F(ProfileTest, config)
 {
     int world_rank = 0;
     int shm_rank = 0;
-    bool test_result = true;
     auto key_lambda = [] (const std::string &name)
     {
         return (uint64_t) 0;
@@ -500,7 +490,49 @@ TEST_F(ProfileTest, config)
     };
     std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
-    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE);
+    m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
+    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
+    m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
+
+    m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, /*std::shared_ptr<IProfileThreadTable>*/ nullptr,
+                /*std::unique_ptr<ISharedMemoryUser>*/ nullptr, std::move(m_table),
+                std::move(table_shmem), std::move(m_scheduler),
+                std::move(m_ctl_msg), std::unique_ptr<ProfileTestSharedMemoryUser>(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE)),
+                m_world_comm.get()));
+    m_profile->config_prof_comm();
+    auto sample_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-sample", M_SHMEM_REGION_SIZE));
+    m_profile->config_ctl_shm();
+    // TODO this call creates a real ControlMessage that attempts to step/wait on destruction
+    // either work around or simulate this step/wait interaction to fix induced hang
+    // create fixture that forks creating a profile and profile sampler?
+    //m_profile->config_ctl_msg();
+    m_profile->config_cpu_affinity();
+    size_t tprof_shm_size = geopm_sched_num_cpu() * 64;
+    auto tprof_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-tprof", tprof_shm_size));
+    m_profile->config_tprof_table();
+    std::ostringstream table_shm_key;
+    table_shm_key << M_SHM_KEY <<  "-sample-" << world_rank;
+    auto table_shm = std::unique_ptr<SharedMemory>(new SharedMemory(table_shm_key.str(), M_SHMEM_REGION_SIZE));
+    m_profile->config_table();
+}
+
+TEST_F(ProfileTest, config_throws)
+{
+    int world_rank = 0;
+    int shm_rank = 0;
+    auto key_lambda = [] (const std::string &name)
+    {
+        return (uint64_t) 0;
+    };
+    auto insert_lambda = [] (uint64_t key, const struct geopm_prof_message_s &value)
+    {
+    };
+    std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
+    m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
+    EXPECT_CALL(*m_ctl_msg, cpu_rank(testing::_))
+        .WillRepeatedly(testing::Return(-2));
+    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE);
     m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
     m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
     m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
@@ -514,25 +546,11 @@ TEST_F(ProfileTest, config)
     //EXPECT_THROW(m_profile->config_ctl_shm(), Exception);// TODO will need work to produce this throw
     auto sample_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-sample", M_SHMEM_REGION_SIZE));
     m_profile->config_ctl_shm();
-    // TODO this call creates a real ControlMessage that attempts to step/wait on destruction
-    // either work around or simulate this step/wait interaction to fix induced hang
-    // create fixture that forks creating a profile and profile sampler?
-    //m_profile->config_ctl_msg();
-    m_profile->config_cpu_affinity();
-    //EXPECT_THROW(m_profile->config_tprof_shm(), Exception);// TODO will need work to produce this throw
-    size_t tprof_shm_size = geopm_sched_num_cpu() * 64;
-    auto tprof_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-tprof", tprof_shm_size));
-    m_profile->config_tprof_table();// TODO size of memory area matters test negative case
-    std::ostringstream table_shm_key;
-    table_shm_key << M_SHM_KEY <<  "-sample-" << world_rank;
-    auto table_shm = std::unique_ptr<SharedMemory>(new SharedMemory(table_shm_key.str(), M_SHMEM_REGION_SIZE));
-    m_profile->config_table();
-    setenv("GEOPM_ERROR_AFFINITY_IGNORE", "", 1);
-    geopm_env_load();
-    EXPECT_CALL(*m_ctl_msg, cpu_rank(testing::_))
-        .WillRepeatedly(testing::Return(-2));
     EXPECT_THROW(m_profile->config_cpu_affinity(), Exception);
-    unsetenv("GEOPM_ERROR_AFFINITY_IGNORE");
+    //EXPECT_THROW(m_profile->config_tprof_shm(), Exception);// TODO will need work to produce this throw
+    size_t tprof_shm_size = 4;
+    auto tprof_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-tprof", tprof_shm_size));
+    EXPECT_THROW(m_profile->config_tprof_table(), Exception);
 }
 
 class ProfileSamplerTest : public :: testing :: Test
@@ -553,514 +571,3 @@ ProfileSamplerTest::~ProfileSamplerTest()
 TEST_F(ProfileSamplerTest, hello)
 {
 }
-
-#if 0
-TEST_F(ProfileTest, hello)
-{
-    for (auto world_rank : m_rank) {
-        for (auto shm_rank : m_rank) {
-            bool test_result = true;
-            m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
-            m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
-            std::string region_name = ;
-            uint64_t expected_rid = ;
-            auto key_lambda = [region_name, expected_rid] (const std::string &name)
-            {
-                EXPECT_EQ(region_name, name);
-                return expected_rid;
-            };
-            double prog_fraction = 0.0;
-            auto insert_lambda = [world_rank, &expected_rid, &prog_fraction] (uint64_t key, const struct geopm_prof_message_s &value)
-            {
-                EXPECT_EQ(expected_rid, key);
-                EXPECT_EQ(world_rank, value.rank);
-                EXPECT_EQ(expected_rid, value.region_id);
-                EXPECT_EQ(prog_fraction, value.progress);
-            };
-            std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
-            m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(region_name, expected_rid, key_lambda, insert_lambda));
-            m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
-
-            m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, /*std::shared_ptr<IProfileThreadTable>*/ nullptr,
-                    /*std::unique_ptr<ISharedMemoryUser>*/ nullptr, std::move(m_table),
-                    std::move(table_shmem), std::move(m_scheduler),
-                    std::move(m_ctl_msg), std::unique_ptr<ProfileTestSharedMemoryUser>(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE)),
-                    m_world_comm.get()));
-            m_profile->config_prof_comm();
-            //EXPECT_THROW(m_profile->config_ctl_shm(), Exception);// TODO will need work to produce this throw
-            auto sample_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-sample", M_SHMEM_REGION_SIZE));
-            m_profile->config_ctl_shm();
-            // TODO this call creates a real ControlMessage that attempts to step/wait on destruction
-            // either work around or simulate this step/wait interaction to fix induced hang
-            // create fixture that forks creating a profile and profile sampler?
-            //m_profile->config_ctl_msg();
-            m_profile->config_cpu_affinity();
-            //EXPECT_THROW(m_profile->config_tprof_shm(), Exception);// TODO will need work to produce this throw
-            size_t tprof_shm_size = geopm_sched_num_cpu() * 64;
-            auto tprof_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-tprof", tprof_shm_size));
-            m_profile->config_tprof_table();// TODO size of memory area matters test negative case
-            std::ostringstream table_shm_key;
-            table_shm_key << M_SHM_KEY <<  "-sample-" << world_rank;
-            auto table_shm = std::unique_ptr<SharedMemory>(new SharedMemory(table_shm_key.str(), M_SHMEM_REGION_SIZE));
-            m_profile->config_table();
-
-            long hint = 0;
-            uint64_t rid = m_profile->region(region_name, hint);
-            // call region with a new string
-            // make it an mpi region for 2 birds
-            EXPECT_EQ(expected_rid, rid);
-            m_profile->enter(rid);
-            // call enter with new rid
-            expected_rid = GEOPM_REGION_ID_EPOCH;
-            m_profile->epoch();
-            expected_rid = 3780331735;
-            prog_fraction = 1.0;
-            m_profile->exit(rid);
-            prog_fraction = 90.0 / 100.0;
-            // m_scheduler do_sample return true
-            m_profile->progress(rid, prog_fraction);
-            m_profile->tprof_table();
-            m_profile->shutdown();
-            m_profile->region(region_name, hint); // disabled
-            m_profile->enter(rid); // disabled
-            m_profile->exit(rid); // disabled
-            m_profile->progress(rid, prog_fraction); // disabled
-
-            m_profile.reset();
-            sample_shm.reset();
-            tprof_shm.reset();
-            table_shm.reset();
-            // TODO enable region barriers in env
-            // TODO enable verbosity in env
-        }
-    }
-}
-class MPIProfileTest: public :: testing :: Test
-{
-    public:
-        MPIProfileTest();
-        virtual ~MPIProfileTest();
-        void parse_log(const std::vector<double> &check_val);
-        void sleep_exact(double duration);
-    protected:
-        size_t m_table_size;
-        double m_epsilon;
-        bool m_use_std_sleep;
-        std::string m_log_file;
-        std::string m_log_file_node;
-        bool m_is_root_process;
-        int m_report_size;
-        std::vector<double> m_check_val_default;
-        std::vector<double> m_check_val_single;
-        std::vector<double> m_check_val_multi;
-};
-
-MPIProfileTest::MPIProfileTest()
-    : m_table_size(4096)
-    , m_epsilon(0.5)
-    , m_use_std_sleep(false)
-    , m_log_file(geopm_env_report())
-    , m_log_file_node(m_log_file)
-    , m_is_root_process(false)
-    , m_report_size(0)
-    , m_check_val_default({3.0, 6.0, 9.0})
-    , m_check_val_single({6.0, 0.0, 9.0})
-    , m_check_val_multi({1.0, 2.0, 3.0})
-{
-    MPI_Comm ppn1_comm;
-    int rank;
-    geopm_comm_split_ppn1(MPI_COMM_WORLD, "prof", &ppn1_comm);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &m_report_size);
-    if (!rank) {
-        m_is_root_process = true;
-        MPI_Comm_free(&ppn1_comm);
-    }
-    else {
-        m_is_root_process = false;
-    }
-}
-
-MPIProfileTest::~MPIProfileTest()
-{
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (m_is_root_process) {
-        remove(m_log_file_node.c_str());
-    }
-
-}
-
-void MPIProfileTest::sleep_exact(double duration)
-{
-    if (m_use_std_sleep) {
-        sleep(duration);
-    }
-    else {
-        struct geopm_time_s start;
-        geopm_time(&start);
-
-        struct geopm_time_s curr;
-        double timeout = 0.0;
-        while (timeout < duration) {
-            geopm_time(&curr);
-            timeout = geopm_time_diff(&start, &curr);
-        }
-    }
-}
-
-void MPIProfileTest::parse_log(const std::vector<double> &check_val)
-{
-    ASSERT_EQ(3ULL, check_val.size());
-    int err = geopm_prof_shutdown();
-    ASSERT_EQ(0, err);
-    sleep(1); // Wait for controller to finish writing the report
-
-    if (m_is_root_process) {
-        std::string line;
-        std::vector<double> curr_value(m_report_size, -1.0);
-        std::vector<double> value(m_report_size, 0.0);
-        std::vector<double> epoch_value(m_report_size, 0.0);
-        std::vector<double> startup_value(m_report_size, 0.0);
-        std::vector<double> total_runtime_value(m_report_size, 0.0);
-
-        std::ifstream log(m_log_file_node, std::ios_base::in);
-
-        ASSERT_TRUE(log.is_open());
-
-        int hostnum = -1;
-        while(std::getline(log, line)) {
-            if (hostnum >= 0) {
-                curr_value[hostnum] = -1.0;
-            }
-            if (line.find("Region loop_one") == 0 && hostnum >= 0) {
-                curr_value[hostnum] = check_val[0];
-            }
-            else if (line.find("Region loop_two") == 0 && hostnum >= 0) {
-                curr_value[hostnum] = check_val[1];
-            }
-            else if (line.find("Region loop_three") == 0 && hostnum >= 0) {
-                curr_value[hostnum] = check_val[2];
-            }
-            else if (line.find("Region epoch") == 0 && hostnum >= 0) {
-                std::getline(log, line);
-                ASSERT_NE(0, sscanf(line.c_str(), "\truntime (sec): %lf", &epoch_value[hostnum]));
-            }
-            else if (line.find("Region geopm_mpi_test-startup:") == 0 && hostnum >= 0) {
-                std::getline(log, line);
-                ASSERT_NE(0, sscanf(line.c_str(), "\truntime (sec): %lf", &startup_value[hostnum]));
-            }
-            else if (line.find("Application Totals:") == 0 && hostnum >= 0) {
-                std::getline(log, line);
-                ASSERT_NE(0, sscanf(line.c_str(), "\truntime (sec): %lf", &total_runtime_value[hostnum]));
-            }
-            if (hostnum >= 0 && curr_value[hostnum] != -1.0) {
-                std::getline(log, line);
-                ASSERT_NE(0, sscanf(line.c_str(), "\truntime (sec): %lf", &value[hostnum]));
-                ASSERT_NEAR(value[hostnum], curr_value[hostnum], m_epsilon);
-            }
-            if (line.find("Host:") == 0) {
-                ++hostnum;
-            }
-        }
-
-        for(hostnum = 0; hostnum < m_report_size; ++hostnum) {
-            if (epoch_value[hostnum] != 0.0) {
-                double epoch_target = std::accumulate(check_val.begin(), check_val.end(), 0.0);
-                ASSERT_NEAR(epoch_target, epoch_value[hostnum], m_epsilon);
-                double total_runtime_target = std::accumulate(check_val.begin(), check_val.end(), startup_value[hostnum]);
-                ASSERT_LT(total_runtime_target, total_runtime_value[hostnum]);
-                /// @todo: The assert below may fail because of unaccounted for time reported (~1 second)
-                /// ASSERT_NEAR(total_runtime_target, total_runtime_value, m_epsilon);
-            }
-        }
-
-        log.close();
-    }
-}
-
-TEST_F(MPIProfileTest, runtime)
-{
-    uint64_t region_id[3];
-    struct geopm_time_s start, curr;
-    double timeout = 0.0;
-    int rank;
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    ASSERT_EQ(0, geopm_prof_region("loop_one", GEOPM_REGION_HINT_UNKNOWN, &region_id[0]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[0]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 1.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[0]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_two", GEOPM_REGION_HINT_UNKNOWN, &region_id[1]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[1]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 2.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[1]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_three", GEOPM_REGION_HINT_UNKNOWN, &region_id[2]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[2]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 3.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[2]));
-
-    parse_log(m_check_val_multi);
-}
-
-TEST_F(MPIProfileTest, progress)
-{
-    uint64_t region_id[3];
-    struct geopm_time_s start, curr;
-    double timeout = 0.0;
-    int rank;
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    ASSERT_EQ(0, geopm_prof_region("loop_one", GEOPM_REGION_HINT_UNKNOWN, &region_id[0]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[0]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 1.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[0], timeout/1.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[0]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_two", GEOPM_REGION_HINT_UNKNOWN, &region_id[1]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[1]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 2.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[1], timeout/2.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[1]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_three", GEOPM_REGION_HINT_UNKNOWN, &region_id[2]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[2]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 3.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[2], timeout/3.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[2]));
-
-    parse_log(m_check_val_multi);
-}
-
-TEST_F(MPIProfileTest, multiple_entries)
-{
-    uint64_t region_id[2];
-    struct geopm_time_s start, curr;
-    double timeout = 0.0;
-    int rank;
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    ASSERT_EQ(0, geopm_prof_region("loop_one", GEOPM_REGION_HINT_UNKNOWN, &region_id[0]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[0]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 1.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[0], timeout/1.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[0]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_three", GEOPM_REGION_HINT_UNKNOWN, &region_id[1]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[1]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 3.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[1], timeout/3.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[1]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_one", GEOPM_REGION_HINT_UNKNOWN, &region_id[0]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[0]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 2.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[0], timeout/2.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[0]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_three", GEOPM_REGION_HINT_UNKNOWN, &region_id[1]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[1]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 3.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[1], timeout/3.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[1]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_one", GEOPM_REGION_HINT_UNKNOWN, &region_id[0]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[0]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 3.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[0], timeout/3.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[0]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_three", GEOPM_REGION_HINT_UNKNOWN, &region_id[1]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[1]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 3.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[1], timeout/3.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[1]));
-
-    parse_log(m_check_val_single);
-}
-
-TEST_F(MPIProfileTest, nested_region)
-{
-    uint64_t region_id[3];
-    struct geopm_time_s start, curr;
-    double timeout = 0.0;
-    int rank;
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    ASSERT_EQ(0, geopm_prof_region("loop_one", GEOPM_REGION_HINT_UNKNOWN, &region_id[0]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[0]));
-    ASSERT_EQ(0, geopm_prof_region("loop_two", GEOPM_REGION_HINT_UNKNOWN, &region_id[1]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[1]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 3.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[1], timeout/1.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[1]));
-    ASSERT_EQ(0, geopm_prof_exit(region_id[0]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_three", GEOPM_REGION_HINT_UNKNOWN, &region_id[2]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[2]));
-    ASSERT_EQ(0, geopm_prof_region("loop_two", GEOPM_REGION_HINT_UNKNOWN, &region_id[1]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[1]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 9.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[1], timeout/1.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[1]));
-    ASSERT_EQ(0, geopm_prof_exit(region_id[2]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_one", GEOPM_REGION_HINT_UNKNOWN, &region_id[0]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[0]));
-    ASSERT_EQ(0, geopm_prof_region("loop_two", GEOPM_REGION_HINT_UNKNOWN, &region_id[1]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[1]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 3.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-        geopm_prof_progress(region_id[1], timeout/1.0);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[1]));
-    ASSERT_EQ(0, geopm_prof_exit(region_id[0]));
-
-    parse_log(m_check_val_single);
-}
-
-TEST_F(MPIProfileTest, epoch)
-{
-    uint64_t region_id[4];
-    int rank;
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    for (int i = 0; i < 3; i++) {
-        ASSERT_EQ(0, geopm_prof_epoch());
-
-        ASSERT_EQ(0, geopm_prof_region("loop_one", GEOPM_REGION_HINT_UNKNOWN, &region_id[0]));
-        ASSERT_EQ(0, geopm_prof_enter(region_id[0]));
-        sleep_exact(1.0);
-        ASSERT_EQ(0, geopm_prof_exit(region_id[0]));
-
-        ASSERT_EQ(0, geopm_prof_region("loop_two", GEOPM_REGION_HINT_UNKNOWN, &region_id[1]));
-        ASSERT_EQ(0, geopm_prof_enter(region_id[1]));
-        sleep_exact(2.0);
-        ASSERT_EQ(0, geopm_prof_exit(region_id[1]));
-
-        ASSERT_EQ(0, geopm_prof_region("loop_three", GEOPM_REGION_HINT_UNKNOWN, &region_id[2]));
-        ASSERT_EQ(0, geopm_prof_enter(region_id[2]));
-        sleep_exact(3.0);
-        ASSERT_EQ(0, geopm_prof_exit(region_id[2]));
-
-        MPI_Barrier(MPI_COMM_WORLD);
-    }
-
-    parse_log(m_check_val_default);
-}
-
-TEST_F(MPIProfileTest, noctl)
-{
-    uint64_t region_id[3];
-    struct geopm_time_s start, curr;
-    double timeout = 0.0;
-    int rank;
-
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    ASSERT_EQ(0, geopm_prof_region("loop_one", GEOPM_REGION_HINT_UNKNOWN, &region_id[0]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[0]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 1.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[0]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_two", GEOPM_REGION_HINT_UNKNOWN, &region_id[1]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[1]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 2.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[1]));
-
-    timeout = 0.0;
-    ASSERT_EQ(0, geopm_prof_region("loop_three", GEOPM_REGION_HINT_UNKNOWN, &region_id[2]));
-    ASSERT_EQ(0, geopm_prof_enter(region_id[2]));
-    ASSERT_EQ(0, geopm_time(&start));
-    while (timeout < 3.0) {
-        ASSERT_EQ(0, geopm_time(&curr));
-        timeout = geopm_time_diff(&start, &curr);
-    }
-    ASSERT_EQ(0, geopm_prof_exit(region_id[2]));
-
-}
-#endif
