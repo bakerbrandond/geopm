@@ -63,7 +63,7 @@
 #include "Platform.hpp"
 #include "PlatformFactory.hpp"
 #include "PlatformTopology.hpp"
-#include "Profile.hpp"
+#include "ProfileSampler.hpp"
 #include "DeciderFactory.hpp"
 #include "Decider.hpp"
 #include "GlobalPolicy.hpp"

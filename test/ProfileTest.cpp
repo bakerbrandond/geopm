@@ -563,22 +563,3 @@ TEST_F(ProfileTest, config_throws)
     auto tprof_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-tprof", tprof_shm_size));
     EXPECT_THROW(m_profile->config_tprof_table(), Exception);
 }
-
-class ProfileSamplerTest : public :: testing :: Test
-{
-    public:
-        ProfileSamplerTest();
-        ~ProfileSamplerTest();
-};
-
-ProfileSamplerTest::ProfileSamplerTest()
-{
-}
-
-ProfileSamplerTest::~ProfileSamplerTest()
-{
-}
-
-TEST_F(ProfileSamplerTest, hello)
-{
-}
