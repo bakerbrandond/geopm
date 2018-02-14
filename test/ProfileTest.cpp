@@ -270,13 +270,16 @@ TEST_F(ProfileTest, enter_exit)
 
     std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
     m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
+    m_tprof = std::unique_ptr<ProfileTestProfileThreadTable>(new ProfileTestProfileThreadTable());
+    EXPECT_CALL(*m_tprof, enable(testing::_))
+        .WillRepeatedly(testing::Return());
 
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
     m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
     m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
     m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
 
-    m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, nullptr,
+    m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, std::move(m_tprof),
                 nullptr, std::move(m_table),
                 std::move(table_shmem), std::move(m_scheduler),
                 std::move(m_ctl_msg), nullptr,
@@ -286,14 +289,18 @@ TEST_F(ProfileTest, enter_exit)
     for (size_t idx = 0; idx < m_region_names.size(); ++idx) {
         uint64_t rid = m_profile->region(region_name, hint);
         prog_fraction = 0.0;
+        expected_rid = m_expected_rid[idx];
         m_profile->enter(rid);
         if (!idx) {
+            expected_rid = GEOPM_REGION_ID_MPI;
             m_profile->enter(GEOPM_REGION_ID_MPI);
         }
         prog_fraction = 1.0;
         if (!idx) {
+            expected_rid = GEOPM_REGION_ID_MPI;
             m_profile->exit(GEOPM_REGION_ID_MPI);
         }
+        expected_rid = m_expected_rid[idx];
         m_profile->exit(rid);
     }
     m_profile->enter(GEOPM_REGION_ID_MPI);
