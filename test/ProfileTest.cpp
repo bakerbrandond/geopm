@@ -288,9 +288,9 @@ TEST_F(ProfileTest, enter_exit)
     long hint = 0;
     for (size_t idx = 0; idx < m_region_names.size(); ++idx) {
         region_name = m_region_names[idx];
+        expected_rid = m_expected_rid[idx];
         uint64_t rid = m_profile->region(region_name, hint);
         prog_fraction = 0.0;
-        expected_rid = m_expected_rid[idx];
         m_profile->enter(rid);
         if (!idx) {
             expected_rid = m_expected_rid[idx] | GEOPM_REGION_ID_MPI;
