@@ -287,6 +287,7 @@ TEST_F(ProfileTest, enter_exit)
     m_profile->config_prof_comm();
     long hint = 0;
     for (size_t idx = 0; idx < m_region_names.size(); ++idx) {
+        region_name = m_region_names[idx];
         uint64_t rid = m_profile->region(region_name, hint);
         prog_fraction = 0.0;
         expected_rid = m_expected_rid[idx];
