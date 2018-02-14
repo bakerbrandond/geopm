@@ -334,6 +334,46 @@ TEST_F(ProfileTest, progress)
     hint++;
 }
 
+TEST_F(ProfileTest, epoch)
+{
+    // call again after shutdown to test m_enable
+    int shm_rank = 0;
+    int world_rank = 0;
+    bool test_result = true; //TODO remove?
+    std::string region_name;
+    uint64_t expected_rid = GEOPM_REGION_ID_EPOCH;
+    double prog_fraction = 0.0;
+
+    auto key_lambda = [&region_name, &expected_rid] (const std::string &name)
+    {
+        EXPECT_EQ(region_name, name);
+        return expected_rid;
+    };
+    auto insert_lambda = [world_rank, &expected_rid, &prog_fraction] (uint64_t key, const struct geopm_prof_message_s &value)
+    {
+        EXPECT_EQ(expected_rid, key);
+        EXPECT_EQ(world_rank, value.rank);
+        EXPECT_EQ(expected_rid, value.region_id);
+        EXPECT_EQ(prog_fraction, value.progress);
+    };
+
+    std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
+    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(region_name, expected_rid, key_lambda, insert_lambda));
+
+    m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
+    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+    m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
+    m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
+
+    m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, nullptr,
+                nullptr, std::move(m_table),
+                std::move(table_shmem), std::move(m_scheduler),
+                std::move(m_ctl_msg), nullptr,
+                m_world_comm.get()));
+    m_profile->config_prof_comm();
+    m_profile->epoch();
+}
+
 TEST_F(ProfileTest, hello)
 {
 #if 0
