@@ -92,6 +92,7 @@ namespace geopm
         , m_tprof_table(prof_table)
         , M_OVERHEAD_FRAC(overhead_frac)
         , m_scheduler(std::move(scheduler))
+        , m_cpu_list({0, 1})
         , m_world_comm(comm)
         , m_shm_comm(NULL)
         , m_rank(-1)
