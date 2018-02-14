@@ -197,7 +197,7 @@ ProfileTest::ProfileTest()
     , M_SHMEM_REGION_SIZE (12288)
     , M_SHM_COMM_SIZE (2)
     , M_OVERHEAD_FRAC (0.01)
-    , m_expected_rid({3780331735, 0})
+    , m_expected_rid({5599005, 3780331735})
     , m_region_names({"test_region_name", "test_other_name"})
     , m_rank ({0, 1})
 {
@@ -292,18 +292,21 @@ TEST_F(ProfileTest, enter_exit)
         expected_rid = m_expected_rid[idx];
         m_profile->enter(rid);
         if (!idx) {
-            expected_rid = GEOPM_REGION_ID_MPI;
+            expected_rid = m_expected_rid[idx] | GEOPM_REGION_ID_MPI;
             m_profile->enter(GEOPM_REGION_ID_MPI);
         }
         prog_fraction = 1.0;
         if (!idx) {
-            expected_rid = GEOPM_REGION_ID_MPI;
+            expected_rid = m_expected_rid[idx] | GEOPM_REGION_ID_MPI;
             m_profile->exit(GEOPM_REGION_ID_MPI);
         }
         expected_rid = m_expected_rid[idx];
         m_profile->exit(rid);
     }
+    prog_fraction = 0.0;
+    expected_rid = GEOPM_REGION_ID_MPI;
     m_profile->enter(GEOPM_REGION_ID_MPI);
+    prog_fraction = 1.0;
     m_profile->exit(GEOPM_REGION_ID_MPI);
 }
 
