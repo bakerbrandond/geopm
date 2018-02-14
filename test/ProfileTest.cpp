@@ -62,6 +62,11 @@ using geopm::IProfileTable;
 using geopm::ISampleScheduler;
 using geopm::IControlMessage;
 
+extern "C"
+{
+    void geopm_env_load(void);
+}
+
 struct free_delete
 {
     void operator()(void* x)
@@ -104,6 +109,8 @@ class ProfileTestControlMessage : public MockControlMessage
                 .WillRepeatedly(testing::Return());
             EXPECT_CALL(*this, cpu_rank(testing::_))
                 .WillRepeatedly(testing::Return(0));
+            EXPECT_CALL(*this, loop_begin())
+                .WillRepeatedly(testing::Return());
         }
 };
 
@@ -201,6 +208,9 @@ ProfileTest::ProfileTest()
     , m_region_names({"test_region_name", "test_other_name"})
     , m_rank ({0, 1})
 {
+    setenv("GEOPM_REGION_BARRIER", "", 1);
+    setenv("GEOPM_PROFILE_TIMEOUT", std::to_string(1).c_str(), 1);
+    setenv("GEOPM_REPORT_VERBOSITY", std::to_string(1).c_str(), 1);
 }
 
 ProfileTest::~ProfileTest()
@@ -517,6 +527,12 @@ TEST_F(ProfileTest, config)
     table_shm_key << M_SHM_KEY <<  "-sample-" << world_rank;
     auto table_shm = std::unique_ptr<SharedMemory>(new SharedMemory(table_shm_key.str(), M_SHMEM_REGION_SIZE));
     m_profile->config_table();
+    setenv("GEOPM_ERROR_AFFINITY_IGNORE", "", 1);
+    geopm_env_load();
+    EXPECT_CALL(*m_ctl_msg, cpu_rank(testing::_))
+        .WillRepeatedly(testing::Return(-2));
+    EXPECT_THROW(m_profile->config_cpu_affinity(), Exception);
+    unsetenv("GEOPM_ERROR_AFFINITY_IGNORE");
 }
 
 class ProfileSamplerTest : public :: testing :: Test
