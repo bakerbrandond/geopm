@@ -287,9 +287,17 @@ TEST_F(ProfileTest, enter_exit)
         uint64_t rid = m_profile->region(region_name, hint);
         prog_fraction = 0.0;
         m_profile->enter(rid);
+        if (!idx) {
+            m_profile->enter(GEOPM_REGION_ID_MPI);
+        }
         prog_fraction = 1.0;
+        if (!idx) {
+            m_profile->exit(GEOPM_REGION_ID_MPI);
+        }
         m_profile->exit(rid);
     }
+    m_profile->enter(GEOPM_REGION_ID_MPI);
+    m_profile->exit(GEOPM_REGION_ID_MPI);
 }
 
 TEST_F(ProfileTest, progress)
