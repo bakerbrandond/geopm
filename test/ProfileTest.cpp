@@ -203,13 +203,18 @@ ProfileTest::ProfileTest()
     , m_region_names({"test_region_name", "test_other_name"})
     , m_rank ({0, 1})
 {
-    setenv("GEOPM_REGION_BARRIER", "", 1);
+    setenv("GEOPM_ERROR_AFFINITY_IGNORE", "1", 1);
+    setenv("GEOPM_REGION_BARRIER", "1", 1);
     setenv("GEOPM_PROFILE_TIMEOUT", std::to_string(1).c_str(), 1);
     setenv("GEOPM_REPORT_VERBOSITY", std::to_string(1).c_str(), 1);
 }
 
 ProfileTest::~ProfileTest()
 {
+    unsetenv("GEOPM_ERROR_AFFINITY_IGNORE");
+    unsetenv("GEOPM_REGION_BARRIER");
+    unsetenv("GEOPM_PROFILE_TIMEOUT");
+    unsetenv("GEOPM_REPORT_VERBOSITY");
 }
 
 // TODO cleanup env var in destructor
@@ -479,8 +484,6 @@ TEST_F(ProfileTest, tprof_table)
 
 TEST_F(ProfileTest, config)
 {
-    int world_rank = 0;
-    int shm_rank = 0;
     auto key_lambda = [] (const std::string &name)
     {
         return (uint64_t) 0;
@@ -488,33 +491,41 @@ TEST_F(ProfileTest, config)
     auto insert_lambda = [] (uint64_t key, const struct geopm_prof_message_s &value)
     {
     };
-    std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
-    m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
-    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE);
-    m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
-    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
-    m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
+    // TODO add logic to change ctl_msg->cpu_rank(_) return { -1, -2}
+    for (auto world_rank : m_rank) {
+        for (auto shm_rank : m_rank) {
+            std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
+            m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
+            m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE);
+            m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
+            m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
+            m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
 
-    m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, /*std::shared_ptr<IProfileThreadTable>*/ nullptr,
-                /*std::unique_ptr<ISharedMemoryUser>*/ nullptr, std::move(m_table),
-                std::move(table_shmem), std::move(m_scheduler),
-                std::move(m_ctl_msg), std::unique_ptr<ProfileTestSharedMemoryUser>(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE)),
-                m_world_comm.get()));
-    m_profile->config_prof_comm();
-    auto sample_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-sample", M_SHMEM_REGION_SIZE));
-    m_profile->config_ctl_shm();
-    // TODO this call creates a real ControlMessage that attempts to step/wait on destruction
-    // either work around or simulate this step/wait interaction to fix induced hang
-    // create fixture that forks creating a profile and profile sampler?
-    //m_profile->config_ctl_msg();
-    m_profile->config_cpu_affinity();
-    size_t tprof_shm_size = geopm_sched_num_cpu() * 64;
-    auto tprof_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-tprof", tprof_shm_size));
-    m_profile->config_tprof_table();
-    std::ostringstream table_shm_key;
-    table_shm_key << M_SHM_KEY <<  "-sample-" << world_rank;
-    auto table_shm = std::unique_ptr<SharedMemory>(new SharedMemory(table_shm_key.str(), M_SHMEM_REGION_SIZE));
-    m_profile->config_table();
+            m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, /*std::shared_ptr<IProfileThreadTable>*/ nullptr,
+                        /*std::unique_ptr<ISharedMemoryUser>*/ nullptr, std::move(m_table),
+                        std::move(table_shmem), std::move(m_scheduler),
+                        std::move(m_ctl_msg), std::unique_ptr<ProfileTestSharedMemoryUser>(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE)),
+                        m_world_comm.get()));
+            m_profile->config_prof_comm();
+            auto sample_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-sample", M_SHMEM_REGION_SIZE));
+            m_profile->config_ctl_shm();
+            // TODO this call creates a real ControlMessage that attempts to step/wait on destruction
+            // either work around or simulate this step/wait interaction to fix induced hang
+            // create fixture that forks creating a profile and profile sampler?
+            //m_profile->config_ctl_msg();
+            m_profile->config_cpu_affinity();
+            size_t tprof_shm_size = geopm_sched_num_cpu() * 64;
+            auto tprof_shm = std::unique_ptr<SharedMemory>(new SharedMemory(M_SHM_KEY + "-tprof", tprof_shm_size));
+            m_profile->config_tprof_table();
+            std::ostringstream table_shm_key;
+            table_shm_key << M_SHM_KEY <<  "-sample-" << world_rank;
+            auto table_shm = std::unique_ptr<SharedMemory>(new SharedMemory(table_shm_key.str(), M_SHMEM_REGION_SIZE));
+            m_profile->config_table();
+            sample_shm.reset();
+            tprof_shm.reset();
+            table_shm.reset();
+        }
+    }
 }
 
 TEST_F(ProfileTest, config_throws)
