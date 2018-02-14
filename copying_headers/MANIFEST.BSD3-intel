@@ -219,6 +219,7 @@ test/MockPlatformIO.hpp
 test/MockPlatformTopo.hpp
 test/MockPolicy.hpp
 test/MockProfileSampler.hpp
+test/MockProfileThreadTable.hpp
 test/MockRegion.hpp
 test/MockSharedMemory.hpp
 test/MockSharedMemoryUser.hpp

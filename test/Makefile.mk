@@ -231,7 +231,6 @@ GTEST_TESTS = test/gtest_links/PlatformFactoryTest.platform_register \
               test/gtest_links/PlatformIOTest.adjust \
               test/gtest_links/PlatformIOTest.read_signal \
               test/gtest_links/PlatformIOTest.write_control \
-              test/gtest_links/ProfileTest.hello \
               test/gtest_links/ProfileTest.region \
               test/gtest_links/ProfileTest.enter_exit \
               test/gtest_links/ProfileTest.progress \
@@ -287,6 +286,7 @@ test_geopm_test_SOURCES = test/geopm_test.cpp \
                           test/MockComm.hpp \
                           test/MockControlMessage.hpp \
                           test/MockProfileTable.hpp \
+                          test/MockProfileThreadTable.hpp \
                           test/MockSampleScheduler.hpp \
                           test/MockPlatform.hpp \
                           test/MockProfileSampler.hpp \

@@ -46,6 +46,7 @@
 #include "SharedMemory.hpp"
 #include "MockComm.hpp"
 #include "MockProfileTable.hpp"
+#include "MockProfileThreadTable.hpp"
 #include "MockSampleScheduler.hpp"
 #include "MockControlMessage.hpp"
 #include "MockSharedMemoryUser.hpp"
@@ -130,6 +131,14 @@ class ProfileTestProfileTable : public MockProfileTable
         }
 };
 
+class ProfileTestProfileThreadTable : public MockProfileThreadTable
+{
+    public:
+        ProfileTestProfileThreadTable()
+        {
+        }
+};
+
 class ProfileTestComm : public MockComm
 {
     public:
@@ -175,6 +184,7 @@ class ProfileTest : public :: testing :: Test
         std::shared_ptr<ProfileTestComm> m_world_comm;
         std::shared_ptr<ProfileTestComm> m_shm_comm;
         std::unique_ptr<ProfileTestProfileTable> m_table;
+        std::unique_ptr<ProfileTestProfileThreadTable> m_tprof;
         std::unique_ptr<ProfileTestSampleScheduler> m_scheduler;
         std::unique_ptr<ProfileTestControlMessage> m_ctl_msg;
 
@@ -199,8 +209,6 @@ ProfileTest::~ProfileTest()
 
 TEST_F(ProfileTest, region)
 {
-    // need table to be configured to no-op
-    // call again after shutdown to test m_enable
     int shm_rank = 0;
     int world_rank = 0;
     bool test_result = true; //TODO remove?
@@ -240,7 +248,6 @@ TEST_F(ProfileTest, region)
 
 TEST_F(ProfileTest, enter_exit)
 {
-    // call again after shutdown to test m_enable
     int shm_rank = 0;
     int world_rank = 0;
     bool test_result = true; //TODO remove?
@@ -287,7 +294,6 @@ TEST_F(ProfileTest, enter_exit)
 
 TEST_F(ProfileTest, progress)
 {
-    // call again after shutdown to test m_enable
     int shm_rank = 0;
     int world_rank = 0;
     bool test_result = true; //TODO remove?
@@ -336,7 +342,6 @@ TEST_F(ProfileTest, progress)
 
 TEST_F(ProfileTest, epoch)
 {
-    // call again after shutdown to test m_enable
     int shm_rank = 0;
     int world_rank = 0;
     bool test_result = true; //TODO remove?
@@ -374,9 +379,105 @@ TEST_F(ProfileTest, epoch)
     m_profile->epoch();
 }
 
+TEST_F(ProfileTest, shutdown)
+{
+    int shm_rank = 0;
+    int world_rank = 0;
+    bool test_result = true; //TODO remove?
+
+    auto key_lambda = [] (const std::string &name)
+    {
+        return (uint64_t) 0;
+    };
+    auto insert_lambda = [] (uint64_t key, const struct geopm_prof_message_s &value)
+    {
+    };
+
+    std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
+    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable("", (uint64_t) 0, key_lambda, insert_lambda));
+
+    m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
+    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+    m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
+    m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
+
+    m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, nullptr,
+                nullptr, std::move(m_table),
+                std::move(table_shmem), std::move(m_scheduler),
+                std::move(m_ctl_msg), nullptr,
+                m_world_comm.get()));
+    m_profile->config_prof_comm();
+    m_profile->shutdown();
+    m_profile->region(m_region_names[0], 0);
+    m_profile->enter(0);
+    m_profile->exit(0);
+    m_profile->epoch();
+    m_profile->tprof_table();
+    m_profile->shutdown();
+}
+
+TEST_F(ProfileTest, tprof_table)
+{
+    int shm_rank = 0;
+    int world_rank = 0;
+    bool test_result = true; //TODO remove?
+    std::string region_name;
+    uint64_t expected_rid = GEOPM_REGION_ID_EPOCH;
+    double prog_fraction = 0.0;
+
+    auto key_lambda = [&region_name, &expected_rid] (const std::string &name)
+    {
+        EXPECT_EQ(region_name, name);
+        return expected_rid;
+    };
+    auto insert_lambda = [world_rank, &expected_rid, &prog_fraction] (uint64_t key, const struct geopm_prof_message_s &value)
+    {
+        EXPECT_EQ(expected_rid, key);
+        EXPECT_EQ(world_rank, value.rank);
+        EXPECT_EQ(expected_rid, value.region_id);
+        EXPECT_EQ(prog_fraction, value.progress);
+    };
+
+    std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
+    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(region_name, expected_rid, key_lambda, insert_lambda));
+    m_tprof = std::unique_ptr<ProfileTestProfileThreadTable>(new ProfileTestProfileThreadTable());
+
+    m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
+    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+    m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
+    m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
+
+    m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, std::move(m_tprof),
+                nullptr, std::move(m_table),
+                std::move(table_shmem), std::move(m_scheduler),
+                std::move(m_ctl_msg), nullptr,
+                m_world_comm.get()));
+    m_profile->config_prof_comm();
+    m_profile->tprof_table();//can't do comparison as local m_tprof was std::move'd
+}
+
+class ProfileSamplerTest : public :: testing :: Test
+{
+    public:
+        ProfileSamplerTest();
+        ~ProfileSamplerTest();
+};
+
+ProfileSamplerTest::ProfileSamplerTest()
+{
+}
+
+ProfileSamplerTest::~ProfileSamplerTest()
+{
+}
+
+TEST_F(ProfileSamplerTest, hello)
+{
+}
+
+#if 0
 TEST_F(ProfileTest, hello)
 {
-#if 0
     for (auto world_rank : m_rank) {
         for (auto shm_rank : m_rank) {
             bool test_result = true;
@@ -454,28 +555,7 @@ TEST_F(ProfileTest, hello)
             // TODO enable verbosity in env
         }
     }
-#endif
 }
-
-class ProfileSamplerTest : public :: testing :: Test
-{
-    public:
-        ProfileSamplerTest();
-        ~ProfileSamplerTest();
-};
-
-ProfileSamplerTest::ProfileSamplerTest()
-{
-}
-
-ProfileSamplerTest::~ProfileSamplerTest()
-{
-}
-
-TEST_F(ProfileSamplerTest, hello)
-{
-}
-#if 0
 class MPIProfileTest: public :: testing :: Test
 {
     public:
