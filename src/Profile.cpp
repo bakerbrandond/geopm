@@ -139,6 +139,8 @@ namespace geopm
         struct geopm_time_s overhead_entry;
         geopm_time(&overhead_entry);
 #endif
+        m_scheduler = std::unique_ptr<SampleScheduler>(new SampleScheduler(M_OVERHEAD_FRAC));
+
         config_prof_comm();
 
         config_ctl_shm();
@@ -166,7 +168,6 @@ namespace geopm
 
     void Profile::config_prof_comm(void)
     {
-        m_scheduler = std::unique_ptr<SampleScheduler>(new SampleScheduler(M_OVERHEAD_FRAC));
         m_rank = m_world_comm->rank();
         m_shm_comm = m_world_comm->split("prof", IComm::M_COMM_SPLIT_TYPE_SHARED);
         m_shm_rank = m_shm_comm->rank();
