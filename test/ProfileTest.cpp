@@ -122,7 +122,7 @@ class ProfileTestSampleScheduler : public MockSampleScheduler
 class ProfileTestProfileTable : public MockProfileTable
 {
     public:
-        ProfileTestProfileTable(std::string region_name, uint64_t expected_rid, std::function<uint64_t (const std::string &)> key_lambda, std::function<void (uint64_t key, const struct geopm_prof_message_s &value)> insert_lambda)
+        ProfileTestProfileTable(std::function<uint64_t (const std::string &)> key_lambda, std::function<void (uint64_t key, const struct geopm_prof_message_s &value)> insert_lambda)
         {
             EXPECT_CALL(*this, key(testing::_))
                 .WillRepeatedly(testing::Invoke(key_lambda));
@@ -224,7 +224,7 @@ TEST_F(ProfileTest, region)
         {
         };
         std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
-        m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(region_name, expected_rid, key_lambda, insert_lambda));
+        m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
 
         m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
         m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
@@ -269,7 +269,7 @@ TEST_F(ProfileTest, enter_exit)
     };
 
     std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
-    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(region_name, expected_rid, key_lambda, insert_lambda));
+    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
 
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
     m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
@@ -315,7 +315,7 @@ TEST_F(ProfileTest, progress)
     };
 
     std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
-    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(region_name, expected_rid, key_lambda, insert_lambda));
+    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
 
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
     m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
@@ -363,7 +363,7 @@ TEST_F(ProfileTest, epoch)
     };
 
     std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
-    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(region_name, expected_rid, key_lambda, insert_lambda));
+    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
 
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
     m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
@@ -394,7 +394,7 @@ TEST_F(ProfileTest, shutdown)
     };
 
     std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
-    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable("", (uint64_t) 0, key_lambda, insert_lambda));
+    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
 
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
     m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
@@ -439,7 +439,7 @@ TEST_F(ProfileTest, tprof_table)
     };
 
     std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
-    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(region_name, expected_rid, key_lambda, insert_lambda));
+    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
     m_tprof = std::unique_ptr<ProfileTestProfileThreadTable>(new ProfileTestProfileThreadTable());
 
     m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
@@ -461,8 +461,6 @@ TEST_F(ProfileTest, config)
     int world_rank = 0;
     int shm_rank = 0;
     bool test_result = true;
-    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
-    m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
     auto key_lambda = [] (const std::string &name)
     {
         return (uint64_t) 0;
@@ -471,7 +469,10 @@ TEST_F(ProfileTest, config)
     {
     };
     std::unique_ptr<ProfileTestSharedMemoryUser> table_shmem(new ProfileTestSharedMemoryUser(M_SHMEM_REGION_SIZE));
-    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable("", (uint64_t) 0, key_lambda, insert_lambda));
+    m_ctl_msg = std::unique_ptr<ProfileTestControlMessage>(new ProfileTestControlMessage());
+    m_shm_comm = std::make_shared<ProfileTestComm>(shm_rank, M_SHM_COMM_SIZE, test_result);
+    m_world_comm = std::make_shared<ProfileTestComm>(world_rank, m_shm_comm);
+    m_table = std::unique_ptr<ProfileTestProfileTable>(new ProfileTestProfileTable(key_lambda, insert_lambda));
     m_scheduler = std::unique_ptr<ProfileTestSampleScheduler>(new ProfileTestSampleScheduler());
 
     m_profile = std::unique_ptr<Profile>(new Profile(M_PROF_NAME, M_SHM_KEY, M_OVERHEAD_FRAC, /*std::shared_ptr<IProfileThreadTable>*/ nullptr,
