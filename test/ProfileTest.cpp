@@ -412,6 +412,7 @@ TEST_F(ProfileTest, shutdown)
     m_profile->enter(0);
     m_profile->exit(0);
     m_profile->epoch();
+    m_profile->progress(0, 0.0);
     m_profile->tprof_table();
     m_profile->shutdown();
 }
