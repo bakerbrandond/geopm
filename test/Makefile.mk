@@ -321,6 +321,7 @@ test_geopm_test_SOURCES = test/geopm_test.cpp \
                           test/MockPlatformIO.hpp \
                           test/MockPlatformTopo.hpp \
                           test/ProfileTest.cpp \
+                          test/ProfileSamplerTest.cpp \
                           # end
 
 test_geopm_test_LDADD = libgtest.a \
