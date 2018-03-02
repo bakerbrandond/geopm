@@ -43,9 +43,9 @@
 
 namespace geopm
 {
-    PluginFactory<IComm> &comm_factory(void)
+    PluginFactory<IComm, struct mpi_comm_payload_s*> &comm_factory(void)
     {
-        static PluginFactory<IComm> instance;
+        static PluginFactory<IComm, struct mpi_comm_payload_s*> instance;
         return instance;
     }
 }

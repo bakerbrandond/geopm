@@ -33,6 +33,7 @@ if ENABLE_MPI
 pkglib_LTLIBRARIES += libgeopmpi_mpi.la
 libgeopmpi_mpi_la_SOURCES = src/MPICommSplit.cpp \
                             plugin/MPIComm.hpp \
+                            plugin/MPIComm_payload.h \
                             plugin/MPIComm.cpp \
                             plugin/MPICommRegister.cpp \
                             # end

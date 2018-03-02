@@ -36,6 +36,7 @@
 
 #include "Comm.hpp"
 #include "MPIComm.hpp"
+#include "MPIComm_payload.h"
 #include "Exception.hpp"
 #include "SharedMemory.hpp"
 #include "geopm_env.h"
@@ -81,13 +82,13 @@ namespace geopm
 
     std::unique_ptr<IComm> MPIComm::make_plugin(void)
     {
-        return std::unique_ptr<IComm>(new MPIComm);
+        static MPIComm *comm_world_singleton = new MPIComm();
+        return std::unique_ptr<MPIComm>(new MPIComm(comm_world_singleton));
     }
 
-    const IComm &MPIComm::get_comm(void)
+    std::unique_ptr<IComm> MPIComm::make_plugin_payload(struct mpi_comm_payload_s *payload)
     {
-        static MPIComm instance;
-        return instance;
+        return std::unique_ptr<MPIComm>(new MPIComm(payload->in_comm));
     }
 
     MPIComm::MPIComm()
@@ -97,13 +98,23 @@ namespace geopm
     {
     }
 
+    MPIComm::MPIComm(MPI_Comm in_comm)
+        : m_comm(MPI_COMM_WORLD)
+        , m_maxdims(1)
+        , m_name(plugin_name())
+    {
+        if (in_comm != MPI_COMM_NULL) {
+            check_mpi(MPI_Comm_dup(in_comm, &m_comm));
+        }
+    }
+
     MPIComm::MPIComm(const MPIComm *in_comm)
         : m_comm(MPI_COMM_NULL)
         , m_maxdims(1)
         , m_name(in_comm->m_name)
     {
         if (in_comm->is_valid()) {
-            check_mpi(PMPI_Comm_dup(in_comm->m_comm, &m_comm));
+            check_mpi(MPI_Comm_dup(in_comm->m_comm, &m_comm));
         }
     }
 

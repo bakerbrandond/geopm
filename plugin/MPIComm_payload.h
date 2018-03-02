@@ -30,19 +30,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Comm.hpp"
-#include "MPIComm.hpp"
-#include "Exception.hpp"
+#ifndef MPICOMM_PAYLOAD_H_INCLUDE
+#define MPICOMM_PAYLOAD_H_INCLUDE
 
-static void __attribute__((constructor)) mpi_comm_plugin_init()
+#ifndef GEOPM_TEST
+#include <mpi.h>
+#endif
+
+struct mpi_comm_payload_s
 {
-    try {
-        geopm::comm_factory().register_plugin(geopm::MPIComm::plugin_name(),
-                                              geopm::MPIComm::make_plugin);
-        geopm::comm_factory().register_plugin(geopm::MPIComm::plugin_name(),
-                                              geopm::MPIComm::make_plugin_payload);
-    }
-    catch(...) {
-        geopm::exception_handler(std::current_exception());
-    }
-}
+    MPI_Comm in_comm;
+};
+
+#endif

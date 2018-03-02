@@ -42,6 +42,7 @@ plugin/GoverningDecider.hpp
 plugin/Makefile.mk
 plugin/MPIComm.cpp
 plugin/MPIComm.hpp
+plugin/MPIComm_payload.h
 plugin/MPICommRegister.cpp
 scripts/geopmaprun
 scripts/geopmplotter

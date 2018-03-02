@@ -202,7 +202,8 @@ namespace geopm
             virtual void window_put(const void *send_buf, size_t send_size, int rank, off_t disp, size_t window_id) const = 0;
     };
 
-    PluginFactory<IComm>& comm_factory(void);
+    struct mpi_comm_payload_s;
+    PluginFactory<IComm, struct mpi_comm_payload_s*>& comm_factory(void);
 }
 
 #endif
