@@ -42,9 +42,10 @@
 #include <mpi.h>
 #endif
 
+#include "MPIComm_payload.h"
+
 namespace geopm
 {
-    struct mpi_comm_payload_s;
 
     class MPIComm : public IComm
     {

@@ -49,9 +49,9 @@ struct geopm_ctl_c;
 /************************/
 /* OBJECT INSTANTIATION */
 /************************/
+struct mpi_comm_payload_s;
 int geopm_ctl_create(struct geopm_policy_c *policy,
-                     const void *comm,
-                     size_t sz_of_comm,
+                     struct mpi_comm_payload_s *comm,
                      struct geopm_ctl_c **ctl);
 
 int geopm_ctl_destroy(struct geopm_ctl_c *ctl);

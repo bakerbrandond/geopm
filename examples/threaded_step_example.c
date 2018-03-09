@@ -46,6 +46,8 @@
 #include "geopm_ctl.h"
 #include "geopm_policy.h"
 
+#include "plugin/MPIComm_payload.h"
+
 #ifndef NAME_MAX
 #define NAME_MAX 512
 #endif
@@ -69,7 +71,7 @@ static int run_something(void)
     int num_thread, i, num_iter = 1000000, iter_per_step = 100, chunk_size = 128;
     int step_counter = 0;
     uint64_t region_id;
-    MPI_Comm comm = MPI_COMM_WORLD;
+    struct mpi_comm_payload_s comm = {MPI_COMM_WORLD};
 
     #pragma omp parallel
     {
@@ -96,7 +98,7 @@ static int run_something(void)
         err = geopm_policy_create("profile_policy", "", &policy);
     }
     if (!err) {
-        err = geopm_ctl_create(policy, (void *) &comm, sizeof(comm), &ctl);
+        err = geopm_ctl_create(policy, &comm, &ctl);
     }
     if (!err) {
         err = geopm_ctl_step(ctl);

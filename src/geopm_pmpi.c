@@ -48,6 +48,7 @@
 #include "geopm_mpi_comm_split.h"
 #include "geopm_pmpi.h"
 #include "geopm_sched.h"
+#include "plugin/MPIComm_payload.h"
 #include "config.h"
 
 static int g_is_geopm_pmpi_ctl_enabled = 0;
@@ -169,7 +170,8 @@ static int geopm_pmpi_init(const char *exec_name)
                     }
                 }
                 if (!err) {
-                    err = geopm_ctl_create(policy, (void *) &g_geopm_comm_world_swap, sizeof(g_geopm_comm_world_swap), &g_ctl);
+                    struct mpi_comm_payload_s comm = {g_geopm_comm_world_swap};
+                    err = geopm_ctl_create(policy, &comm, &g_ctl);
                 }
                 if (!err) {
                     err = geopm_ctl_run(g_ctl);
@@ -204,7 +206,8 @@ static int geopm_pmpi_init(const char *exec_name)
                     err = geopm_policy_create(geopm_env_policy(), NULL, &policy);
                 }
                 if (!err) {
-                    err = geopm_ctl_create(policy, (void *) &g_ppn1_comm, sizeof(g_ppn1_comm), &g_ctl);
+                    struct mpi_comm_payload_s comm = {g_ppn1_comm};
+                    err = geopm_ctl_create(policy, &comm, &g_ctl);
                 }
 #ifndef __APPLE__
                 if (!err) {

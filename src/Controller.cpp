@@ -119,12 +119,13 @@ extern "C"
         return err;
     }
 
-    int geopm_ctl_create(struct geopm_policy_c *policy, const void *comm, size_t sz_of_comm, struct geopm_ctl_c **ctl)
+    int geopm_ctl_create(struct geopm_policy_c *policy, struct mpi_comm_payload_s *comm, struct geopm_ctl_c **ctl)
     {
         int err = 0;
         try {
             geopm::IGlobalPolicy *global_policy = (geopm::IGlobalPolicy *)policy;
-            auto tmp_comm = geopm::comm_factory().make_plugin(geopm_env_comm(), comm, sz_of_comm);
+            auto plugin_name = std::string(geopm_env_comm());
+            auto tmp_comm = geopm::comm_factory().make_plugin(plugin_name, comm);
             *ctl = (struct geopm_ctl_c *)(new geopm::Controller(global_policy, std::move(tmp_comm)));
         }
         catch (...) {
@@ -135,7 +136,9 @@ extern "C"
 
     int geopm_ctl_create_f(struct geopm_policy_c *policy, int comm, struct geopm_ctl_c **ctl)
     {
-        return geopm_ctl_create(policy, (void *) &comm, sizeof(comm), ctl);
+        // TODO move API to geopm_pmpi.c and do Fortran in to MPI_Comm there, stuff into payload struct and call
+        //return geopm_ctl_create(policy, (void *) &comm, sizeof(comm), ctl);
+        return 0;
     }
 
     int geopm_ctl_destroy(struct geopm_ctl_c *ctl)
