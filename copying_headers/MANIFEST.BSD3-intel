@@ -113,6 +113,8 @@ src/IOGroup.cpp
 src/IOGroup.hpp
 src/KNLPlatformImp.cpp
 src/KNLPlatformImp.hpp
+src/Kontroller.cpp
+src/Kontroller.hpp
 src/MonitorAgent.cpp
 src/MonitorAgent.hpp
 src/MPIComm.cpp
@@ -232,6 +234,7 @@ test_integration/geopm_test_loop.sh
 test_integration/geopm_test_loop.sh
 test_integration/Makefile.mk
 test_integration/Makefile.mk
+test/KontrollerTest.cpp
 test/legacy_whitelist.out
 test/legacy_whitelist.out
 test/Makefile.mk

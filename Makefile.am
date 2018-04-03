@@ -295,6 +295,8 @@ libgeopmpolicy_la_SOURCES = src/Agent.cpp \
                             src/Helper.hpp \
                             src/KNLPlatformImp.cpp \
                             src/KNLPlatformImp.hpp \
+                            src/Kontroller.cpp \
+                            src/Kontroller.hpp \
                             src/MonitorAgent.cpp \
                             src/MonitorAgent.hpp \
                             src/MSR.cpp \
