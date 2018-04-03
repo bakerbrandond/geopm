@@ -274,6 +274,7 @@ GTEST_TESTS = test/gtest_links/PlatformFactoryTest.platform_register \
               test/gtest_links/MonitorAgentTest.sample_platform \
               test/gtest_links/MonitorAgentTest.descend_nothing \
               test/gtest_links/MonitorAgentTest.ascend_aggregates_signals \
+              test/gtest_links/ReporterTest.generate \
               # end
 
 if ENABLE_MPI
@@ -368,6 +369,7 @@ test_geopm_test_SOURCES = test/geopm_test.cpp \
                           test/TreeCommTest.cpp \
                           test/MockTreeCommLevel.hpp \
                           test/MonitorAgentTest.cpp \
+                          test/ReporterTest.cpp \
                           # end
 
 test_geopm_test_LDADD = libgtest.a \

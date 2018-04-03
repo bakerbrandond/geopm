@@ -346,6 +346,8 @@ libgeopmpolicy_la_SOURCES = src/Agent.cpp \
                             src/RAPLPlatform.hpp \
                             src/Region.cpp \
                             src/Region.hpp \
+                            src/Reporter.cpp \
+                            src/Reporter.hpp \
                             src/RuntimeRegulator.cpp \
                             src/RuntimeRegulator.hpp \
                             src/SampleRegulator.cpp \

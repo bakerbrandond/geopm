@@ -167,6 +167,8 @@ src/RAPLPlatform.cpp
 src/RAPLPlatform.hpp
 src/Region.cpp
 src/Region.hpp
+src/Reporter.cpp
+src/Reporter.hpp
 src/RuntimeRegulator.cpp
 src/RuntimeRegulator.hpp
 src/SampleRegulator.cpp
@@ -277,6 +279,7 @@ test/ProfileIOSampleTest.cpp
 test/ProfileTableTest.cpp
 test/ProfileTest.cpp
 test/RegionTest.cpp
+test/ReporterTest.cpp
 test/RuntimeRegulatorTest.cpp
 test/SampleRegulatorTest.cpp
 test/SchedTest.cpp
