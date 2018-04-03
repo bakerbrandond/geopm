@@ -96,12 +96,12 @@ TEST_F(MonitorAgentTest, fixed_signal_list)
     // if this list changes, update the mocked platform for this test
     // in the future, user should provide this list
     std::vector<std::string> expected_signals = {"TIME", "POWER_PACKAGE", "FREQUENCY", "REGION_PROGRESS"};
-    EXPECT_EQ(expected_signals, m_agent->sample_names());
+    EXPECT_EQ(expected_signals, m_agent->send_up_names());
 }
 
 TEST_F(MonitorAgentTest, all_signals_in_trace)
 {
-    auto signals = m_agent->sample_names();
+    auto signals = m_agent->send_up_names();
     auto trace_col = m_agent->trace_columns();
     ASSERT_EQ(signals.size(), trace_col.size());
     for (size_t idx = 0; idx < signals.size(); ++idx) {
@@ -131,15 +131,8 @@ TEST_F(MonitorAgentTest, sample_platform)
 
 TEST_F(MonitorAgentTest, descend_nothing)
 {
-    std::vector<std::string> expected_policy_names = {"POWER", "FREQUENCY"};
-    EXPECT_EQ(expected_policy_names, m_agent->policy_names());
-
-    std::vector<double> in_policy {56, 78};
-    std::vector<std::vector<double> > expected_policy { {56, 78}, {56, 78} };
-    std::vector<std::vector<double> > result { {0, 0}, {0, 0} };
-
-    m_agent->descend(in_policy, result);
-    EXPECT_EQ(expected_policy,result);
+    std::vector<std::string> expected_policy_names = {};
+    EXPECT_EQ(expected_policy_names, m_agent->send_down_names());
 }
 
 TEST_F(MonitorAgentTest, ascend_aggregates_signals)

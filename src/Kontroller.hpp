@@ -60,11 +60,12 @@ namespace geopm
             Kontroller(std::shared_ptr<IComm> ppn1_comm,
                        const std::string &global_policy_path);
             /// @brief Constructor for testing
-            Kontroller(IPlatformTopo &plat_topo,
+            Kontroller(std::shared_ptr<IComm> ppn1_comm,
+                       IPlatformTopo &plat_topo,
                        IPlatformIO &plat_io,
                        const std::string &agent_name,
-                       int num_send_up,
                        int num_send_down,
+                       int num_send_up,
                        std::unique_ptr<ITreeComm> tree_comm,
                        int num_level_ctl,
                        int root_level,
@@ -82,6 +83,7 @@ namespace geopm
             void pthread(const pthread_attr_t *attr, pthread_t *thread);
             void setup_trace(void);
         private:
+            std::shared_ptr<IComm> m_comm;
             IPlatformTopo &m_platform_topo;
             IPlatformIO &m_platform_io;
             int m_ppn1_rank;

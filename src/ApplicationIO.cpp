@@ -77,12 +77,6 @@ namespace geopm
         }
     }
 
-    bool ApplicationIO::do_sample(void)
-    {
-        /// @todo implement me
-        return false;
-    }
-
     bool ApplicationIO::do_shutdown(void)
     {
         return m_sampler->do_shutdown();
@@ -90,20 +84,23 @@ namespace geopm
 
     std::string ApplicationIO::report_name(void)
     {
-        /// @todo implement me
-        return "";
+        std::string result;
+        m_sampler->report_name(result);
+        return result;
     }
 
     std::string ApplicationIO::profile_name(void)
     {
-        /// @todo implement me
-        return "";
+        std::string result;
+        m_sampler->profile_name(result);
+        return result;
     }
 
     std::set<std::string> ApplicationIO::region_name_set(void)
     {
-        /// @todo implement me
-        return {};
+        std::set<std::string> result;
+        m_sampler->name_set(result);
+        return result;
     }
 
     void ApplicationIO::update_short_regions(std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_begin,
@@ -132,7 +129,7 @@ namespace geopm
 
     void ApplicationIO::update(std::shared_ptr<IComm> comm)
     {
-        size_t length = 0; /// @todo fix
+        size_t length = 0;
         m_sampler->sample(m_prof_sample, length, comm);
         m_profile_io_sample->update(m_prof_sample.cbegin(), m_prof_sample.cbegin() + length);
         //m_profile_io_runtime->update(m_prof_sample.cbegin(), m_prof_sample.cbegin() + length);

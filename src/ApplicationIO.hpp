@@ -52,7 +52,6 @@ namespace geopm
         public:
             IApplicationIO() = default;
             virtual ~IApplicationIO() = default;
-            virtual bool do_sample(void) = 0;
             virtual bool do_shutdown(void) = 0;
             virtual std::string report_name(void) = 0;
             virtual std::string profile_name(void) = 0;
@@ -77,7 +76,6 @@ namespace geopm
         public:
             ApplicationIO(const std::string &shm_key);
             virtual ~ApplicationIO();
-            bool do_sample(void) override;
             bool do_shutdown(void) override;
             std::string report_name(void) override;
             std::string profile_name(void) override;

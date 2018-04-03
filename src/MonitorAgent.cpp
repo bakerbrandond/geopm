@@ -61,18 +61,11 @@ namespace geopm
                                                               trace_cols[col_idx].domain_type,
                                                               trace_cols[col_idx].domain_idx);
         }
-
-        auto name = policy_names();
-        for (int pol_idx = 0; pol_idx < M_NUM_POLICY_MAILBOX; ++pol_idx) {
-            m_policy_idx[pol_idx] = m_platform_io.push_control(name[pol_idx],
-                                                               IPlatformTopo::M_DOMAIN_BOARD,
-                                                               0);
-        }
     }
 
     std::string MonitorAgent::plugin_name(void)
     {
-        return "STATIC_POLICY";
+        return "MONITOR_AGENT";
     }
 
     std::unique_ptr<IAgent> MonitorAgent::make_plugin(void)
@@ -88,7 +81,7 @@ namespace geopm
     }
 
     void MonitorAgent::descend(const std::vector<double> &in_policy,
-                                    std::vector<std::vector<double> >&out_policy)
+                               std::vector<std::vector<double> >&out_policy)
     {
         std::cout << "agent " << m_level << " descend()" << std::endl;
         for (auto &pol : out_policy) {
@@ -98,7 +91,7 @@ namespace geopm
     }
 
     void MonitorAgent::ascend(const std::vector<std::vector<double> > &in_signal,
-                                   std::vector<double> &out_signal)
+                              std::vector<double> &out_signal)
     {
         std::cout << "agent " << m_level << " ascend()" << std::endl;
         /// @todo assert out_signal.size() == in_signal[x].size()
@@ -107,24 +100,15 @@ namespace geopm
              for (size_t child_idx = 0; child_idx < in_signal.size(); ++child_idx) {
                  temp[child_idx] = in_signal[child_idx][sig_idx];
              }
-             /// @todo use signal name to get the right agg function
              /// @todo functions can be saved as member
-             auto agg_func = m_platform_io.agg_function(sample_names()[sig_idx]);
+             auto agg_func = m_platform_io.agg_function(send_up_names()[sig_idx]);
              out_signal[sig_idx] = agg_func(temp);
         }
     }
 
     void MonitorAgent::adjust_platform(const std::vector<double> &in_policy)
     {
-        /// @todo
-        std::cout << "agent " << m_level << " adjust_platform(): ";
-        int pol_idx = 0;
-        for (auto pol_value : in_policy) {
-            std::cout << pol_value << " ";
-            m_platform_io.adjust(m_policy_idx[pol_idx], pol_value);
-            ++pol_idx;
-        }
-        std::cout << std::endl;
+        std::cout << "agent " << m_level << " adjust_platform(): " << std::endl;
     }
 
     void MonitorAgent::sample_platform(std::vector<double> &out_sample)
@@ -142,21 +126,6 @@ namespace geopm
     {
         std::cout << "agent " << m_level << " wait()" << std::endl;
         /// @todo
-    }
-
-    std::vector<std::string> MonitorAgent::policy_names(void)
-    {
-        /// @todo remove these - this agent is sampling only; no control
-        return {"POWER", "FREQUENCY"};
-    }
-
-    std::vector<std::string> MonitorAgent::sample_names(void)
-    {
-        std::vector<std::string> result;
-        for (auto &col : trace_columns()) {
-            result.emplace_back(col.name);
-        }
-        return result;
     }
 
     std::string MonitorAgent::report_header(void)
@@ -183,5 +152,15 @@ namespace geopm
             {"REGION_PROGRESS", IPlatformTopo::M_DOMAIN_BOARD, 0},
         };
         return columns;
+    }
+
+    std::vector<std::string> MonitorAgent::send_down_names(void)
+    {
+        return {};
+    }
+
+    std::vector<std::string> MonitorAgent::send_up_names(void)
+    {
+        return {"TIME", "POWER_PACKAGE", "FREQUENCY", "REGION_PROGRESS"};
     }
 }

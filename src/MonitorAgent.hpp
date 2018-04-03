@@ -49,8 +49,6 @@ namespace geopm
     {
         public:
             enum m_policy_mailbox_idx_e {
-                M_POLICY_MAILBOX_POWER,
-                M_POLICY_MAILBOX_FREQUENCY,
                 M_NUM_POLICY_MAILBOX,
             };
             enum m_sample_mailbox_idx_e {
@@ -72,12 +70,12 @@ namespace geopm
             void adjust_platform(const std::vector<double> &in_policy) override;
             void sample_platform(std::vector<double> &out_sample) override;
             void wait(void) override;
-            std::vector<std::string> policy_names(void) override;
-            std::vector<std::string> sample_names(void) override;
             std::string report_header(void) override;
             std::string report_node(void) override;
             std::map<uint64_t, std::string> report_region(void) override;
             std::vector<IPlatformIO::m_request_s> trace_columns(void) override;
+            static std::vector<std::string> send_down_names(void);
+            static std::vector<std::string> send_up_names(void);
             static std::string plugin_name(void);
             static std::unique_ptr<IAgent> make_plugin(void);
         private:

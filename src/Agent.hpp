@@ -61,18 +61,15 @@ namespace geopm
             virtual void sample_platform(std::vector<double> &sample) = 0;
             /// Called by Kontroller to wait for sample period to elapse.
             virtual void wait(void) = 0;
-            virtual std::vector<std::string> policy_names(void) = 0;
-            virtual std::vector<std::string> sample_names(void) = 0;
             virtual std::string report_header(void) = 0;
             virtual std::string report_node(void) = 0;
             virtual std::map<uint64_t, std::string> report_region(void) = 0;
             virtual std::vector<IPlatformIO::m_request_s> trace_columns(void) = 0;
             static int num_send_up(const std::map<std::string, std::string> &dictionary);
             static int num_send_down(const std::map<std::string, std::string> &dictionary);
-            static std::map<std::string, std::string> make_dictionary(int num_send_up, int num_send_down);
-        private:
-            static const std::string m_num_send_up_string;
-            static const std::string m_num_send_down_string;
+            static std::vector<std::string> send_down_names(const std::map<std::string, std::string> &dictionary);
+            static std::vector<std::string> send_up_names(const std::map<std::string, std::string> &dictionary);
+            static std::map<std::string, std::string> make_dictionary(std::vector<std::string> send_down_names, std::vector<std::string> send_up_names);
     };
 
     PluginFactory<IAgent> &agent_factory(void);

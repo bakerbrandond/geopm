@@ -67,12 +67,14 @@ namespace geopm
             void adjust_platform(const std::vector<double> &in_policy) override;
             void sample_platform(std::vector<double> &out_sample) override;
             void wait(void) override;
-            std::vector<std::string> policy_names(void) override;
-            std::vector<std::string> sample_names(void) override;
             std::string report_header(void) override;
             std::string report_node(void) override;
             std::map<uint64_t, std::string> report_region(void) override;
             std::vector<IPlatformIO::m_request_s> trace_columns(void) override;
+            static std::string plugin_name(void);
+            static std::vector<std::string> send_down_names(void);
+            static std::vector<std::string> send_up_names(void);
+            static std::unique_ptr<IAgent> make_plugin(void);
         private:
             void split_budget(double total_power_budget,
                               const std::vector<double> &power_used,

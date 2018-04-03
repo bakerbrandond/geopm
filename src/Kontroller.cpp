@@ -68,7 +68,8 @@ namespace geopm
 {
     Kontroller::Kontroller(std::shared_ptr<IComm> ppn1_comm,
                const std::string &global_policy_path)
-        : Kontroller(platform_topo(),
+        : Kontroller(ppn1_comm,
+                     platform_topo(),
                      platform_io(),
                      geopm_env_agent(),
                      IAgent::num_send_up(agent_factory().dictionary(m_agent_name)),
@@ -89,7 +90,8 @@ namespace geopm
 
     }
 
-    Kontroller::Kontroller(IPlatformTopo &plat_topo,
+    Kontroller::Kontroller(std::shared_ptr<IComm> comm,
+                           IPlatformTopo &plat_topo,
                            IPlatformIO &plat_io,
                            const std::string &agent_name,
                            int num_send_down,
@@ -102,7 +104,8 @@ namespace geopm
                            std::unique_ptr<ITracer> tracer,
                            std::vector<std::unique_ptr<IAgent> > level_agent,
                            std::map<std::string, double> manager_values)
-        : m_platform_topo(plat_topo)
+        : m_comm(comm)
+        , m_platform_topo(plat_topo)
         , m_platform_io(plat_io)
         , m_agent_name(agent_name)
         , m_num_send_down(num_send_down)
@@ -147,24 +150,6 @@ namespace geopm
             throw Exception("Kontroller must have one agent per level",
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
-        if ((size_t)m_num_send_down != m_agent[0]->policy_names().size()) {
-            throw Exception("Kontroller: num_send_down does not match num policies provided by Agent.",
-                            GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-        }
-        if ((size_t)m_num_send_up != m_agent[0]->sample_names().size()) {
-            throw Exception("Kontroller: num_send_up does not match num samples provided by Agent.",
-                            GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-        }
-
-        m_agent_policy_names = m_agent[0]->policy_names();
-        m_agent_sample_names = m_agent[0]->sample_names();
-        for (auto name : m_agent_policy_names) {
-            if (m_manager_values.find(name) == m_manager_values.end()) {
-                throw Exception("Kontroller: resource manager did not provide required "
-                                "agent policy value for " + name,
-                                GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-            }
-        }
     }
 
     Kontroller::~Kontroller()
@@ -176,7 +161,7 @@ namespace geopm
     void Kontroller::run(void)
     {
         setup_trace();
-        while (m_application_io->do_sample()) {
+        while (!m_application_io->do_shutdown()) {
             step();
         }
         generate();
@@ -209,6 +194,7 @@ namespace geopm
     {
         walk_down();
         geopm_signal_handler_check();
+        m_application_io->update(m_comm);
         std::vector<uint64_t> short_region = m_application_io->short_region();
         struct geopm_time_s epoch_time;
         bool is_epoch = m_application_io->epoch_time(epoch_time);
@@ -240,11 +226,7 @@ namespace geopm
         if (m_is_root) {
             std::cout << "KON sample manager" << std::endl;
             /// @todo: no longer using IOgroup for this. will be special object with a similar API
-            int policy_idx = 0;
-            for (auto key : m_agent_policy_names) {
-                m_in_policy[policy_idx] = m_manager_values.at(key);
-                ++policy_idx;
-            }
+            /// m_in_policy = m_manager_io->policy();
         }
         else {
             m_tree_comm->receive_down(level, m_in_policy);
@@ -285,6 +267,7 @@ namespace geopm
             std::cout << std::endl;
             // At the root of the tree, send signals up to the
             // resource manager.
+            // m_manager_io.adjust(m_out_sample);
         }
     }
 

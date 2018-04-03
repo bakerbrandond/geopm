@@ -41,15 +41,15 @@ namespace geopm
     static void register_built_in_once(void)
     {
         g_plugin_factory->register_plugin(MonitorAgent::plugin_name(),
-                                          MontiorAgent::make_plugin,
-                                          IAgent::make_dictionary(MonitorAgent::M_NUM_POLICY_MAILBOX,
-                                                                  MonitorAgent::M_NUM_SAMPLE_MAILBOX));
+                                          MonitorAgent::make_plugin,
+                                          IAgent::make_dictionary(MonitorAgent::send_down_names(),
+                                                                  MonitorAgent::send_up_names()));
 
 
         g_plugin_factory->register_plugin(BalancingAgent::plugin_name(),
                                           BalancingAgent::make_plugin,
-                                          IAgent::make_dictionary(BalancingAgent::M_NUM_POLICY_MAILBOX,
-                                                                  BalancingAgent::M_NUM_SAMPLE_MAILBOX))
+                                          IAgent::make_dictionary(BalancingAgent::send_down_names(),
+                                                                  BalancingAgent::send_up_names()));
     }
 
     PluginFactory<IAgent> &agent_factory(void)
@@ -60,12 +60,9 @@ namespace geopm
         return instance;
     }
 
-    const std::string IAgent::m_num_send_up_string = "NUM_SEND_UP";
-    const std::string IAgent::m_num_send_down_string = "NUM_SEND_DOWN";
-
     int IAgent::num_send_up(const std::map<std::string, std::string> &dictionary)
     {
-        auto it = dictionary.find(m_num_send_up_string);
+        auto it = dictionary.find("NUM_SEND_UP");
         if (it == dictionary.end()) {
             throw Exception("IAgent::num_send_up(): "
                             "Agent was not registered with plugin factory with the correct dictionary.",
@@ -75,7 +72,7 @@ namespace geopm
     }
     int IAgent::num_send_down(const std::map<std::string, std::string> &dictionary)
     {
-        auto it = dictionary.find(m_num_send_down_string);
+        auto it = dictionary.find("NUM_SEND_DOWN");
         if (it == dictionary.end()) {
             throw Exception("IAgent::num_send_down(): "
                             "Agent was not registered with plugin factory with the correct dictionary.",
@@ -83,10 +80,43 @@ namespace geopm
         }
         return atoi(it->second.c_str());
     }
-    std::map<std::string, std::string> IAgent::make_dictionary(int num_send_up, int num_send_down)
+
+    std::vector<std::string> IAgent::send_up_names(const std::map<std::string, std::string> &dictionary)
     {
-        std::map<std::string, std::string> result = {{m_num_send_up_string, std::to_string(num_send_up)},
-                                                     {m_num_send_down_string, std::to_string(num_send_down)}};
+        std::vector<std::string> result;
+        for (const auto &it : dictionary) {
+            if (it.first.find("SEND_UP_") == 0) {
+                result.push_back(it.second);
+            }
+        }
+        return result;
+    }
+
+    std::vector<std::string> IAgent::send_down_names(const std::map<std::string, std::string> &dictionary)
+    {
+        std::vector<std::string> result;
+        for (const auto &it : dictionary) {
+            if (it.first.find("SEND_DOWN_") == 0) {
+                result.push_back(it.second);
+            }
+        }
+        return result;
+    }
+
+    std::map<std::string, std::string> IAgent::make_dictionary(std::vector<std::string> send_up_names, std::vector<std::string> send_down_names)
+    {
+        std::map<std::string, std::string> result;
+        for (size_t send_up_idx = 0; send_up_idx != send_up_names.size(); ++send_up_idx) {
+            std::string key = "SEND_UP_" + std::to_string(send_up_idx);
+            result[key] = send_up_names[send_up_idx];
+        }
+        result["NUM_SEND_UP"] = std::to_string(send_up_names.size());
+
+        for (size_t send_down_idx = 0; send_down_idx != send_down_names.size(); ++send_down_idx) {
+            std::string key = "SEND_DOWN_" + std::to_string(send_down_idx);
+            result[key] = send_down_names[send_down_idx];
+        }
+        result["NUM_SEND_DOWN"] = std::to_string(send_down_names.size());
         return result;
     }
 }

@@ -40,9 +40,10 @@
 
 #include "Kontroller.hpp"
 #include "Agent.hpp"
-#include "StaticPolicyAgent.hpp"
+#include "MonitorAgent.hpp"
 #include "MockPlatformTopo.hpp"
 #include "MockPlatformIO.hpp"
+#include "MockComm.hpp"
 //#include "MockTreeComm.hpp"
 #include "Helper.hpp"
 
@@ -121,7 +122,6 @@ class MockTreeComm : public geopm::ITreeComm
 class MockApplicationIO : public geopm::IApplicationIO
 {
     public:
-        bool do_sample(void) override {return true;}
         bool do_shutdown(void) override {return true;}
         std::string report_name(void) override {return "test.report";}
         std::string profile_name(void) override {return "profile";}
@@ -312,7 +312,7 @@ class KontrollerTest : public ::testing::Test
 {
     protected:
         void SetUp();
-
+        std::shared_ptr<IComm> m_comm;
         NiceMock<MockPlatformTopo> m_topo;
         //NiceMock<MockPlatformIO> m_platform_io;
         KontrollerTestMockPlatformIO m_platform_io;
@@ -345,8 +345,10 @@ void KontrollerTest::SetUp()
     EXPECT_CALL(m_platform_io, adjust(_, _)).Times(AtLeast(0));
 #endif
 
+    m_comm = std::make_shared<MockComm>();
+
     for (int level = 0; level < m_num_level_ctl; ++level) {
-        auto tmp = new geopm::StaticPolicyAgent(m_platform_io, m_topo);
+        auto tmp = new geopm::MonitorAgent(m_platform_io, m_topo);
         //auto tmp = new MockAgent();
         tmp->init(level);
         m_level_agent.emplace_back(tmp);
@@ -357,7 +359,7 @@ void KontrollerTest::SetUp()
 
 TEST_F(KontrollerTest, main)
 {
-    Kontroller kontroller(m_topo, m_platform_io,
+    Kontroller kontroller(m_comm, m_topo, m_platform_io,
                           m_agent_name, m_num_send_down, m_num_send_up,
                           geopm::make_unique<MockTreeComm>(),
                           m_num_level_ctl, m_root_level,
