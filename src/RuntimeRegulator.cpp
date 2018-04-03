@@ -109,6 +109,13 @@ namespace geopm
         return result;
     }
 
+    void RuntimeRegulator::epoch(struct geopm_time_s time)
+    {
+#ifdef GEOPM_DEBUG
+        throw Exception("RuntimeRegulator::epoch(): call not supported", GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
+#endif
+    }
+
     MPIRuntimeRegulator::MPIRuntimeRegulator(int max_rank_count)
         : RuntimeRegulator(max_rank_count)
     {

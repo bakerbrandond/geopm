@@ -50,6 +50,7 @@ namespace geopm
             virtual void record_exit(int rank, struct geopm_time_s exit_time) = 0;
             virtual void insert_runtime_signal(std::vector<struct geopm_telemetry_message_s> &telemetry) = 0;
             virtual std::vector<double> runtimes(void) const = 0;
+            virtual void epoch(struct geopm_time_s time) = 0;
     };
 
     class RuntimeRegulator : public IRuntimeRegulator
@@ -62,6 +63,7 @@ namespace geopm
             void record_exit(int rank, struct geopm_time_s exit_time) override;
             void insert_runtime_signal(std::vector<struct geopm_telemetry_message_s> &telemetry) override;
             std::vector<double> runtimes(void) const override;
+            virtual void epoch(struct geopm_time_s time) override;
 
         protected:
             void update_average(void);
