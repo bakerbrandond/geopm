@@ -406,10 +406,10 @@ namespace geopm
         if (!m_is_connected) {
             m_sampler->initialize();
             m_rank_per_node = m_sampler->rank_per_node();
-            auto rid_it = m_rid_regulator_map.emplace(std::piecewise_construct,
-                                                      std::make_tuple(GEOPM_REGION_ID_MPI),
-                                                      std::make_tuple(geopm::make_unique<MPIRuntimeRegulator>
-                                                      (m_rank_per_node)));
+            auto mpi_rid_it = m_rid_regulator_map.emplace(std::piecewise_construct,
+                                                          std::make_tuple(GEOPM_REGION_ID_MPI),
+                                                          std::make_tuple(geopm::make_unique<MPIRuntimeRegulator>
+                                                          (m_rank_per_node)));
             m_prof_sample.resize(m_sampler->capacity());
             std::vector<int> cpu_rank = m_sampler->cpu_rank();
             m_platform->init_transform(cpu_rank);
@@ -417,7 +417,12 @@ namespace geopm
             m_profile_io_sample = std::make_shared<ProfileIOSample>(cpu_rank);
             m_profile_io_runtime = std::make_shared<ProfileIORuntime>(cpu_rank);
             // Add new MPI region regulator to ProfileIO
-            m_profile_io_runtime->insert_regulator(GEOPM_REGION_ID_MPI, *(rid_it.first->second));
+            m_profile_io_runtime->insert_regulator(GEOPM_REGION_ID_MPI, *(mpi_rid_it.first->second));
+            auto epoch_rid_it = m_rid_regulator_map.emplace(std::piecewise_construct,
+                                                            std::make_tuple(GEOPM_REGION_ID_EPOCH),
+                                                            std::make_tuple(geopm::make_unique<EpochTimeRegulator>
+                                                            (*((MPIRuntimeRegulator *)(mpi_rid_it.first->second).get()))));
+            m_profile_io_runtime->insert_regulator(GEOPM_REGION_ID_EPOCH, *(epoch_rid_it.first->second));
             platform_io().register_iogroup(geopm::make_unique<ProfileIOGroup>(m_profile_io_sample,
                                                                               m_profile_io_runtime));
             m_is_connected = true;
@@ -732,6 +737,7 @@ namespace geopm
                                                   aligned_signal,
                                                   m_region_id);
                             m_platform->transform_rank_data(m_region_id_all, m_msr_sample[0].timestamp, aligned_signal, epoch_telemetry_sample);
+                            m_rid_regulator_map[GEOPM_REGION_ID_EPOCH]->epoch(m_msr_sample[0].timestamp);
                             is_epoch_found = true;
                             m_region_id_all = region_id_all_tmp;
                         }
