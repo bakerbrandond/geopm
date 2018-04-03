@@ -43,6 +43,9 @@ namespace geopm
 {
     class IRuntimeRegulator
     {
+        protected:
+            constexpr static struct geopm_time_s M_TIME_ZERO = (struct geopm_time_s){{0, 0}};
+
         public:
             IRuntimeRegulator() = default;
             virtual ~IRuntimeRegulator() = default;
@@ -67,7 +70,6 @@ namespace geopm
 
         protected:
             void update_average(void);
-            const struct geopm_time_s M_TIME_ZERO;
             enum m_num_rank_signal_e {
                 M_NUM_RANK_SIGNAL = 2,
             };
@@ -83,8 +85,25 @@ namespace geopm
             MPIRuntimeRegulator() = delete;
             MPIRuntimeRegulator(int max_rank_count);
             virtual ~MPIRuntimeRegulator() = default;
+            double average(void);
         protected:
             void update_average(void);
+    };
+
+    class EpochTimeRegulator : public IRuntimeRegulator
+    {
+        public:
+            EpochTimeRegulator() = delete;
+            EpochTimeRegulator(MPIRuntimeRegulator &mpi_reg);
+            virtual ~EpochTimeRegulator() = default;
+            virtual void record_entry(int rank, struct geopm_time_s entry_time);
+            virtual void record_exit(int rank, struct geopm_time_s exit_time);
+            virtual void insert_runtime_signal(std::vector<struct geopm_telemetry_message_s> &telemetry);
+            virtual std::vector<double> runtimes(void) const;
+            virtual void epoch(struct geopm_time_s time);
+        protected:
+            MPIRuntimeRegulator &m_mpi_reg;
+            std::pair<struct geopm_time_s, double> m_last_epoch;
     };
 }
 

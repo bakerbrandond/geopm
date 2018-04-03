@@ -37,9 +37,10 @@
 
 namespace geopm
 {
+    constexpr struct geopm_time_s IRuntimeRegulator::M_TIME_ZERO;
+
     RuntimeRegulator::RuntimeRegulator(int max_rank_count)
-        : M_TIME_ZERO ((struct geopm_time_s){{0, 0}})
-        , m_max_rank_count (max_rank_count)
+        : m_max_rank_count (max_rank_count)
         , m_last_avg (0.0)
         , m_runtimes(m_max_rank_count, std::make_pair(M_TIME_ZERO, 0.0))
     {
@@ -129,6 +130,57 @@ namespace geopm
         }
 
         m_last_avg = sum / m_runtimes.size();
+    }
+
+    double MPIRuntimeRegulator::average(void)
+    {
+        return m_last_avg;
+    }
+
+    EpochTimeRegulator::EpochTimeRegulator(MPIRuntimeRegulator &mpi_reg)
+        : m_mpi_reg(mpi_reg)
+        , m_last_epoch(std::make_pair(M_TIME_ZERO, 0.0))
+    {
+    }
+
+    void EpochTimeRegulator::record_entry(int rank, struct geopm_time_s entry_time)
+    {
+#ifdef GEOPM_DEBUG
+        throw Exception("EpochTimeRegulator::record_entry(): call not supported", GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
+#endif
+    }
+
+    void EpochTimeRegulator::record_exit(int rank, struct geopm_time_s exit_time)
+    {
+#ifdef GEOPM_DEBUG
+        throw Exception("EpochTimeRegulator::record_exit(): call not supported", GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
+#endif
+    }
+
+    void EpochTimeRegulator::insert_runtime_signal(std::vector<struct geopm_telemetry_message_s> &telemetry)
+    {
+        /// @todo proper domain averaging
+        for (auto &domain_tel : telemetry) {
+            domain_tel.signal[GEOPM_TELEMETRY_TYPE_RUNTIME] = m_last_epoch.second;
+        }
+    }
+
+    std::vector<double> EpochTimeRegulator::runtimes(void) const
+    {
+        return {m_last_epoch.second};
+    }
+
+    void EpochTimeRegulator::epoch(struct geopm_time_s time)
+    {
+        if (geopm_time_diff(&m_last_epoch.first, &M_TIME_ZERO) == 0.0) {
+            m_last_epoch.first = time;
+        }
+        else {
+            double delta = geopm_time_diff(&time, &m_last_epoch.first);
+            m_last_epoch.first = time;
+            m_last_epoch.second += delta;
+            m_last_epoch.second -= m_mpi_reg.average();
+        }
     }
 
 }

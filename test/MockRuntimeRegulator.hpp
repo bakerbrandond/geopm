@@ -49,6 +49,8 @@ class MockRuntimeRegulator : public geopm::IRuntimeRegulator
                      void(std::vector<struct geopm_telemetry_message_s> &telemetry));
         MOCK_CONST_METHOD0(runtimes,
                      std::vector<double>());
+        MOCK_METHOD1(epoch,
+                     void(struct geopm_time_s time));
 };
 
 #endif
