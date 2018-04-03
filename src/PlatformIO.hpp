@@ -34,8 +34,10 @@
 #define PLATFORMIO_HPP_INCLUDE
 
 #include <stdint.h>
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
+#include <functional>
 
 namespace geopm
 {
@@ -78,6 +80,10 @@ namespace geopm
             virtual int push_signal(const std::string &signal_name,
                                     int domain_type,
                                     int domain_idx) = 0;
+            virtual int push_combined_signal(const std::string &signal_name,
+                                             int domain_type,
+                                             int domain_idx,
+                                             const std::vector<int> &sub_signal_idx) = 0;
             /// @brief Push a control onto the end of the vector that
             ///        can be adjusted.
             /// @param [in] control_name Name of the control requested.
@@ -150,6 +156,21 @@ namespace geopm
                                        int domain_type,
                                        int domain_idx,
                                        double setting) = 0;
+            virtual std::function<double(const std::vector<double> &)> agg_function(std::string signal_name) = 0;
+            static double agg_sum(const std::vector<double> &operand);
+            static double agg_average(const std::vector<double> &operand);
+            static double agg_median(const std::vector<double> &operand);
+            static double agg_and(const std::vector<double> &operand);
+            static double agg_or(const std::vector<double> &operand);
+            static double agg_min(const std::vector<double> &operand);
+            static double agg_max(const std::vector<double> &operand);
+            static double agg_stddev(const std::vector<double> &operand);
+            static double agg_region_id(const std::vector<double> &operand);
+            struct m_request_s {
+                std::string name;
+                int domain_type;
+                int domain_idx;
+            };
     };
 
     IPlatformIO &platform_io(void);

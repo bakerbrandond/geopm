@@ -38,6 +38,7 @@
 #include <limits.h>
 
 #include "Tracer.hpp"
+#include "PlatformIO.hpp"
 #include "Exception.hpp"
 #include "geopm_env.h"
 #include "config.h"
@@ -51,6 +52,7 @@ namespace geopm
         , m_buffer_limit(134217728) // 128 MiB
         , m_time_zero({{0, 0}})
         , m_policy({0, 0, 0, 0.0})
+        , m_platform_io(platform_io())
     {
         geopm_time(&m_time_zero);
         if (geopm_env_do_trace()) {
@@ -86,7 +88,7 @@ namespace geopm
             if (m_do_header) {
                 // Write the GlobalPolicy information first
                 m_buffer << m_header;
-                m_buffer << "# \"node_name\" : \"" << m_hostname << "\"" << std::endl;
+                m_buffer << "# \"node_name\" : \"" << m_hostname << "\"" << "\n";
                 m_buffer << "region_id | seconds | ";
                 for (size_t i = 0; i < telemetry.size(); ++i) {
                     m_buffer << "pkg_energy-" << i << " | "
@@ -99,7 +101,7 @@ namespace geopm
                              << "progress-" << i << " | "
                              << "runtime-" << i << " | ";
                 }
-                m_buffer << "policy_mode | policy_flags | policy_num_sample | policy_power_budget" << std::endl;
+                m_buffer << "policy_mode | policy_flags | policy_num_sample | policy_power_budget\n";
                 m_do_header = false;
             }
             m_buffer << telemetry[0].region_id << " | "
@@ -112,7 +114,7 @@ namespace geopm
             m_buffer << m_policy.mode << " | "
                      << m_policy.flags << " | "
                      << m_policy.num_sample << " | "
-                     << m_policy.power_budget << std::endl;
+                     << m_policy.power_budget << "\n";
 
         }
         if (m_buffer.tellp() > m_buffer_limit) {
@@ -126,5 +128,33 @@ namespace geopm
         if (m_is_trace_enabled) {
             m_policy = policy;
         }
+    }
+
+    void Tracer::columns(const std::vector<IPlatformIO::m_request_s> &cols)
+    {
+        for (auto col : cols) {
+            m_column_idx.push_back(m_platform_io.push_signal(col.name,
+                                                             col.domain_type,
+                                                             col.domain_idx));
+        }
+    }
+    void Tracer::update(std::vector<double> sample,
+                        std::vector<uint64_t> short_region,
+                        bool is_epoch)
+    {
+        if (sample.size()) {
+            m_buffer << sample[0];
+            for (auto sample_it = sample.begin();
+                 sample_it < sample.end() - 1;
+                 ++sample_it) {
+                m_buffer << " | " << *sample_it;
+            }
+        }
+        m_buffer << "\n";
+    }
+    void Tracer::flush(void)
+    {
+        m_stream << m_buffer.str();
+        m_buffer.str("");
     }
 }

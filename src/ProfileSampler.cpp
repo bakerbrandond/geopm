@@ -86,6 +86,7 @@ namespace geopm
         , m_do_report(false)
         , m_tprof_shmem(nullptr)
         , m_tprof_table(nullptr)
+        , m_rank_per_node(0)
     {
         std::string sample_key(geopm_env_shmkey());
         sample_key += "-sample";
@@ -110,7 +111,7 @@ namespace geopm
     {
     }
 
-    void ProfileSampler::initialize(int &rank_per_node)
+    void ProfileSampler::initialize(void)
     {
         std::ostringstream shm_key;
 
@@ -130,8 +131,8 @@ namespace geopm
             shm_key << m_ctl_shmem->key() <<  "-"  << *it;
             m_rank_sampler.push_front(geopm::make_unique<ProfileRankSampler>(shm_key.str(), m_table_size));
         }
-        rank_per_node = rank_set.size();
-        if (rank_per_node == 0) {
+        m_rank_per_node = rank_set.size();
+        if (m_rank_per_node == 0) {
             m_ctl_msg->abort();
             throw Exception("ProfileSampler::initialize(): Application ranks were not listed as running on any CPUs.",
                             GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
@@ -141,17 +142,24 @@ namespace geopm
         m_ctl_msg->step();
     }
 
-    void ProfileSampler::cpu_rank(std::vector<int> &cpu_rank)
+    int ProfileSampler::rank_per_node(void)
+    {
+        return m_rank_per_node;
+    }
+
+    std::vector<int> ProfileSampler::cpu_rank(void)
     {
         uint32_t num_cpu = geopm_sched_num_cpu();
-        cpu_rank.resize(num_cpu);
+        std::vector<int> result(num_cpu);
         if (num_cpu > GEOPM_MAX_NUM_CPU) {
-            throw Exception("ProfileSampler::cpu_rank: Number of online CPUs is greater than GEOPM_MAX_NUM_CPU", GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
+            throw Exception("ProfileSampler::cpu_rank: Number of online CPUs is greater than GEOPM_MAX_NUM_CPU",
+                            GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
         }
 
         for (unsigned cpu = 0; cpu < num_cpu; ++cpu) {
-            cpu_rank[cpu] = m_ctl_msg->cpu_rank(cpu);
+            result[cpu] = m_ctl_msg->cpu_rank(cpu);
         }
+        return result;
     }
 
     size_t ProfileSampler::capacity(void)

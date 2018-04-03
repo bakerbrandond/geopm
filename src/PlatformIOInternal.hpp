@@ -37,6 +37,7 @@
 #include <list>
 #include <vector>
 #include <map>
+#include <functional>
 
 #include "PlatformIO.hpp"
 #include "CombinedSignal.hpp"
@@ -45,13 +46,15 @@ namespace geopm
 {
     class IOGroup;
     class CombinedSignal;
+    class IPlatformTopo;
 
     class PlatformIO : public IPlatformIO
     {
         public:
             /// @brief Constructor for the PlatformIO class.
             PlatformIO();
-            PlatformIO(std::list<std::unique_ptr<IOGroup> > iogroup_list);
+            PlatformIO(std::list<std::unique_ptr<IOGroup> > iogroup_list,
+                       IPlatformTopo &topo);
             PlatformIO(const PlatformIO &other) = delete;
             PlatformIO & operator=(const PlatformIO&) = delete;
             /// @brief Virtual destructor for the PlatformIO class.
@@ -78,27 +81,34 @@ namespace geopm
                                int domain_type,
                                int domain_idx,
                                double setting) override;
+            std::function<double(const std::vector<double> &)> agg_function(std::string signal_name) override;
         protected:
+            int push_combined_signal(const std::string &signal_name,
+                                     int domain_type,
+                                     int domain_idx,
+                                     const std::vector<int> &sub_signal_idx) override;
             /// @brief Save a high-level signal as a combination of other signals.
             /// @param [in] signal_idx Index a caller can use to refer to this signal.
             /// @param [in] operands Input signal indices to be combined.  These must
             ///             be valid pushed signals registered with PlatformIO.
             /// @param [in] func The function that will combine the signals into
             ///             a single result.
-            //void register_combined_signal(int signal_idx,
-            //                              std::vector<int> operands,
-            //                              std::function<double(std::vector<double>)> func);
             void register_combined_signal(int signal_idx,
                                           std::vector<int> operands,
                                           std::unique_ptr<CombinedSignal> signal);
-
+            int push_signal_power(const std::string &signal_name,
+                                  int domain_type,
+                                  int domain_idx);
+            int push_signal_convert_domain(const std::string &signal_name,
+                                           int domain_type,
+                                           int domain_idx);
             /// @brief Sample a combined signal using the saved function and operands.
             double sample_combined(int signal_idx);
             bool m_is_active;
+            IPlatformTopo &m_platform_topo;
             std::list<std::unique_ptr<IOGroup> > m_iogroup_list;
             std::vector<std::pair<IOGroup *, int> > m_active_signal;
             std::vector<std::pair<IOGroup *, int> > m_active_control;
-
             std::map<int, std::pair<std::vector<int>,
                                     std::unique_ptr<CombinedSignal> > > m_combined_signal;
     };

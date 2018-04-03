@@ -38,7 +38,9 @@
 #include <vector>
 #include <sstream>
 
+#include "PlatformIO.hpp"
 #include "geopm_message.h"
+#include "geopm_time.h"
 
 namespace geopm
 {
@@ -50,7 +52,17 @@ namespace geopm
             virtual ~ITracer() {}
             virtual void update(const std::vector <struct geopm_telemetry_message_s> &telemetry) = 0;
             virtual void update(const struct geopm_policy_message_s &policy) = 0;
+
+            // new API
+            virtual void columns(const std::vector<IPlatformIO::m_request_s> &cols) = 0;
+            virtual void update(std::vector<double> sample,
+                                std::vector<uint64_t> short_region,
+                                bool is_epoch) = 0;
+            virtual void flush(void) = 0;
+            static std::string pretty_name(IPlatformIO::m_request_s col);
     };
+
+    class IPlatformIO;
 
     /// @brief Class used to write a trace of the telemetry and policy.
     class Tracer : public ITracer
@@ -60,8 +72,13 @@ namespace geopm
             Tracer(std::string header);
             /// @brief Tracer destructor, virtual.
             virtual ~Tracer();
+            void columns(const std::vector<IPlatformIO::m_request_s> &cols) override;
+            void update(std::vector<double> sample,
+                        std::vector<uint64_t> short_region,
+                        bool is_epoch) override;
             void update(const std::vector <struct geopm_telemetry_message_s> &telemetry) override;
             void update(const struct geopm_policy_message_s &policy) override;
+            void flush(void) override;
         protected:
             std::string m_header;
             std::string m_hostname;
@@ -72,6 +89,9 @@ namespace geopm
             off_t m_buffer_limit;
             struct geopm_time_s m_time_zero;
             struct geopm_policy_message_s m_policy;
+
+            IPlatformIO &m_platform_io;
+            std::vector<int> m_column_idx;
     };
 }
 

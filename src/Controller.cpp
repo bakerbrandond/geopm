@@ -402,12 +402,12 @@ namespace geopm
         }
 
         if (!m_is_connected) {
-            m_sampler->initialize(m_rank_per_node);
+            m_sampler->initialize();
+            m_rank_per_node = m_sampler->rank_per_node();
             m_num_mpi_enter.resize(m_rank_per_node, 0);
             m_mpi_enter_time.resize(m_rank_per_node, {{0,0}});
             m_prof_sample.resize(m_sampler->capacity());
-            std::vector<int> cpu_rank;
-            m_sampler->cpu_rank(cpu_rank);
+            std::vector<int> cpu_rank = m_sampler->cpu_rank();
             m_platform->init_transform(cpu_rank);
             m_sample_regulator = new SampleRegulator(cpu_rank);
             m_profile_io_sample = std::make_shared<ProfileIOSample>(cpu_rank);
