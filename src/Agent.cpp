@@ -31,7 +31,8 @@
  */
 
 #include "Agent.hpp"
-//#include "StaticPolicyAgent.hpp"
+#include "MonitorAgent.hpp"
+#include "BalancingAgent.hpp"
 
 namespace geopm
 {
@@ -39,20 +40,16 @@ namespace geopm
     static pthread_once_t g_register_built_in_once = PTHREAD_ONCE_INIT;
     static void register_built_in_once(void)
     {
-#if 0
-        g_plugin_factory->register_plugin(StaticPolicyAgent::plugin_name(),
-                                          StaticPolicyAgent::make_plugin,
-                                          IAgent::make_dictionary(StaticPolicyAgent::M_NUM_POLICY_MAILBOX,
-                                                                  StaticPolicyAgent::M_NUM_SAMPLE_MAILBOX));
+        g_plugin_factory->register_plugin(MonitorAgent::plugin_name(),
+                                          MontiorAgent::make_plugin,
+                                          IAgent::make_dictionary(MonitorAgent::M_NUM_POLICY_MAILBOX,
+                                                                  MonitorAgent::M_NUM_SAMPLE_MAILBOX));
 
 
-        /// @todo add this back in once BalacingAgent is implemented
-        ///       and source code is part of libgeopm.
         g_plugin_factory->register_plugin(BalancingAgent::plugin_name(),
                                           BalancingAgent::make_plugin,
                                           IAgent::make_dictionary(BalancingAgent::M_NUM_POLICY_MAILBOX,
                                                                   BalancingAgent::M_NUM_SAMPLE_MAILBOX))
-#endif
     }
 
     PluginFactory<IAgent> &agent_factory(void)
