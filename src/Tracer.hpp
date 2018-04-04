@@ -56,7 +56,6 @@ namespace geopm
             // new API
             virtual void columns(const std::vector<IPlatformIO::m_request_s> &cols) = 0;
             virtual void update(std::vector<double> sample,
-                                std::vector<uint64_t> short_region,
                                 bool is_epoch) = 0;
             virtual void flush(void) = 0;
             static std::string pretty_name(IPlatformIO::m_request_s col);
@@ -74,7 +73,6 @@ namespace geopm
             virtual ~Tracer();
             void columns(const std::vector<IPlatformIO::m_request_s> &cols) override;
             void update(std::vector<double> sample,
-                        std::vector<uint64_t> short_region,
                         bool is_epoch) override;
             void update(const std::vector <struct geopm_telemetry_message_s> &telemetry) override;
             void update(const struct geopm_policy_message_s &policy) override;

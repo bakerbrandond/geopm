@@ -103,10 +103,8 @@ namespace geopm
         return {"EPOCH_MPI_TIME"};
     }
 
-    /// @todo short region also needs to include time difference
-    // std::map<uint64_t, double> short_region
     void Reporter::update(std::vector<double> signal,
-                          std::vector<uint64_t> short_region,
+                          std::vector<std::pair<uint64_t, double> > short_region,
                           bool is_epoch,
                           struct geopm_time_s &epoch_time)
     {

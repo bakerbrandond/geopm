@@ -54,7 +54,7 @@ namespace geopm
             virtual ~IReporter() = default;
             virtual std::vector<std::string> signal_names(void) = 0;
             virtual void update(std::vector<double> signal,
-                                std::vector<uint64_t> short_region,
+                                std::vector<std::pair<uint64_t, double> > short_region,
                                 bool is_epoch,
                                 struct geopm_time_s &epoch_time) = 0;
             virtual void generate(const std::string &report_name,
@@ -74,7 +74,7 @@ namespace geopm
             virtual ~Reporter() = default;
             std::vector<std::string> signal_names(void) override;
             void update(std::vector<double> signal,
-                        std::vector<uint64_t> short_region,
+                        std::vector<std::pair<uint64_t, double> > short_region,
                         bool is_epoch,
                         struct geopm_time_s &epoch_time) override;
             void generate(const std::string &report_name,

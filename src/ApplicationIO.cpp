@@ -106,6 +106,7 @@ namespace geopm
     void ApplicationIO::update_short_regions(std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_begin,
                                              std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_end)
     {
+        m_short_region.clear();
         /// @todo implement me
     }
 
@@ -115,7 +116,7 @@ namespace geopm
         /// @todo implement me
     }
 
-    std::vector<uint64_t> ApplicationIO::short_region(void)
+    std::vector<std::pair<uint64_t, double> > ApplicationIO::short_region(void)
     {
         /// @todo implement me
         return {};

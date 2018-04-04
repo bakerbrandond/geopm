@@ -758,7 +758,8 @@ namespace geopm
                 m_rid_regulator_map[geopm_region_id_unset_mpi(m_telemetry_sample[0].region_id)].insert_runtime_signal(m_telemetry_sample);
 
                 // First entry into any region
-                if (m_region_id_all == GEOPM_REGION_ID_UNDEFINED && region_id_all != m_region_id_all) {
+                if (m_region_id_all == GEOPM_REGION_ID_UNDEFINED &&
+                    region_id_all != GEOPM_REGION_ID_UNDEFINED) {
                     m_region_id_all = region_id_all;
                     override_telemetry(0.0);
                     update_region();
@@ -865,7 +866,7 @@ namespace geopm
             (*it).region_id = m_region_id_all;
             (*it).signal[GEOPM_TELEMETRY_TYPE_PROGRESS] = progress;
         }
-        m_rid_regulator_map[geopm_region_id_unset_mpi(m_telemetry_sample[0].region_id)].insert_runtime_signal(m_telemetry_sample);
+        m_rid_regulator_map[geopm_region_id_unset_mpi(m_region_id_all)].insert_runtime_signal(m_telemetry_sample);
     }
 
     void Controller::update_region(void)

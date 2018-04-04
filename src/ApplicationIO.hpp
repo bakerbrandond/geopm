@@ -56,11 +56,7 @@ namespace geopm
             virtual std::string report_name(void) = 0;
             virtual std::string profile_name(void) = 0;
             virtual std::set<std::string> region_name_set(void) = 0;
-            virtual void update_short_regions(std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_begin,
-                                              std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_end) = 0;
-            virtual void update_epoch(std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_begin,
-                                      std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_end) = 0;
-            virtual std::vector<uint64_t> short_region(void) = 0;
+            virtual std::vector<std::pair<uint64_t, double> > short_region(void) = 0;
             virtual bool epoch_time(struct geopm_time_s &epoch_time) = 0;
             virtual void update(std::shared_ptr<IComm> comm) = 0;
     };
@@ -80,17 +76,17 @@ namespace geopm
             std::string report_name(void) override;
             std::string profile_name(void) override;
             std::set<std::string> region_name_set(void) override;
-            void update_short_regions(std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_begin,
-                                      std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_end) override;
-            void update_epoch(std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_begin,
-                              std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_end) override;
-            std::vector<uint64_t> short_region(void) override;
+            std::vector<std::pair<uint64_t, double> > short_region(void) override;
             bool epoch_time(struct geopm_time_s &epoch_time) override;
             void update(std::shared_ptr<IComm> comm) override;
         private:
             static constexpr size_t M_SHMEM_REGION_SIZE = 12288;
 
             void connect(void);
+            void update_short_regions(std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_begin,
+                                      std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_end);
+            void update_epoch(std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_begin,
+                              std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_end);
 
             std::unique_ptr<IProfileSampler> m_sampler;
             std::unique_ptr<ISampleRegulator> m_sample_regulator;
@@ -105,6 +101,7 @@ namespace geopm
             std::map<uint64_t, std::unique_ptr<RuntimeRegulator> > m_rid_regulator_map;
             std::shared_ptr<IProfileIOSample> m_profile_io_sample;
             std::shared_ptr<IProfileIORuntime> m_profile_io_runtime;
+            std::vector<std::pair<uint64_t, double> > m_short_region;
     };
 }
 

@@ -139,7 +139,6 @@ namespace geopm
         }
     }
     void Tracer::update(std::vector<double> sample,
-                        std::vector<uint64_t> short_region,
                         bool is_epoch)
     {
         if (sample.size()) {

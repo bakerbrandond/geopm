@@ -129,11 +129,7 @@ class MockApplicationIO : public geopm::IApplicationIO
         {
             return {"region A", "region B"};
         }
-        void update_short_regions(std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_begin,
-                                  std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_end) override {}
-        void update_epoch(std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_begin,
-                          std::vector<std::pair<uint64_t, struct geopm_prof_message_s> >::const_iterator prof_sample_end) override {}
-        std::vector<uint64_t> short_region(void) override {return {};}
+        std::vector<std::pair<uint64_t, double> > short_region(void) override {return {};}
         bool epoch_time(struct geopm_time_s &epoch_time) override {return true;}
         void update(std::shared_ptr<IComm> comm) override {}
 
@@ -144,7 +140,7 @@ class MockReporter : public geopm::IReporter
     public:
         std::vector<std::string> signal_names(void) override {return {};};
         void update(std::vector<double> signal,
-                    std::vector<uint64_t> short_region,
+                    std::vector<std::pair<uint64_t, double> > short_region,
                     bool is_epoch,
                     struct geopm_time_s &epoch_time) override
         {
@@ -187,7 +183,7 @@ class MockTracer : public geopm::ITracer
         void update(const std::vector <struct geopm_telemetry_message_s> &telemetry) override {}
         void update(const struct geopm_policy_message_s &policy) override {}
         void columns(const std::vector<geopm::IPlatformIO::m_request_s> &cols) override {}
-        void update(std::vector<double> sample, std::vector<uint64_t> short_region,
+        void update(std::vector<double> sample,
                     bool is_epoch) override
         {
             for (auto dd : sample) {
