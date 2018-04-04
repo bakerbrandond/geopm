@@ -381,6 +381,9 @@ namespace geopm
             return;
         }
 
+        auto reg_it = m_rid_regulator_map.find(GEOPM_REGION_ID_EPOCH);
+        std::cerr << "EPOCH runtime: " << 1000 * reg_it->second->runtimes()[0] << " mpi_sync: " << m_mpi_agg_time << std::endl;
+
         m_do_shutdown = true;
 
         delete m_tracer;
@@ -632,6 +635,10 @@ namespace geopm
                         else if (sample_it->second.progress == 1.0 &&
                                  !geopm_region_id_hint_is_equal(GEOPM_REGION_HINT_IGNORE, base_region_id)) {
                             m_rid_regulator_map[GEOPM_REGION_ID_MPI]->record_exit(local_rank, sample_it->second.timestamp);
+                            double new_val = ((MPIRuntimeRegulator *)m_rid_regulator_map[GEOPM_REGION_ID_MPI].get())->average();
+                            double old_val = m_rid_regulator_map[GEOPM_REGION_ID_MPI]->runtimes()[local_rank] / m_rank_per_node;
+                            std::cerr << "mpi_inc_val_new: " << new_val << "\tmpi_inc_val_new_extra_div: "
+                                      << new_val / m_rank_per_node << "\tmpi_inc_val_old: " << old_val << std::endl;
                             region_mpi_time += m_rid_regulator_map[GEOPM_REGION_ID_MPI]->runtimes()[local_rank] / m_rank_per_node;
                         }
                         if (!base_region_id) {
@@ -662,6 +669,7 @@ namespace geopm
                     }
                     if (geopm_region_id_is_epoch(sample_it->second.region_id)) {
                         is_epoch_begun = true;
+                        m_rid_regulator_map[GEOPM_REGION_ID_EPOCH]->epoch(sample_it->second.timestamp);
                     }
                 }
                 m_mpi_sync_time += region_mpi_time;
@@ -685,6 +693,7 @@ namespace geopm
                     if (is_epoch_begun) {
                         region_it = m_region[level].find(GEOPM_REGION_ID_EPOCH);
                         region_it->second->increment_mpi_time(region_mpi_time);
+                        //m_rid_regulator_map[GEOPM_REGION_ID_EPOCH]->epoch(sample_it->second.timestamp);
                     }
                 }
 

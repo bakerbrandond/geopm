@@ -30,6 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <iostream>//debug
+#include <iomanip>//debug
 #include "Exception.hpp"
 #include "RuntimeRegulator.hpp"
 
@@ -172,14 +174,15 @@ namespace geopm
 
     void EpochTimeRegulator::epoch(struct geopm_time_s time)
     {
+        std::cerr << std::setprecision(16);
+        std::cerr << "epoch called at time: " << geopm_time_diff(&M_TIME_ZERO, &time) << std::endl;
         if (geopm_time_diff(&m_last_epoch.first, &M_TIME_ZERO) == 0.0) {
             m_last_epoch.first = time;
         }
         else {
-            double delta = geopm_time_diff(&time, &m_last_epoch.first);
+            double delta = geopm_time_diff(&m_last_epoch.first, &time);
             m_last_epoch.first = time;
-            m_last_epoch.second += delta;
-            m_last_epoch.second -= m_mpi_reg.average();
+            m_last_epoch.second += (delta - m_mpi_reg.average());   // what if sample with mpi increment is after the epoch sample?
         }
     }
 
