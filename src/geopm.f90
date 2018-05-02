@@ -51,10 +51,9 @@ module geopm
 
         !> @brief Fortran interface to @link geopm_ctl.h geopm_ctl_create @endlink C function.
         !> @ingroup fortran
-        integer(kind=c_int) function geopm_ctl_create(policy, comm, ctl) bind(C, name="geopm_ctl_create_f")
+        integer(kind=c_int) function geopm_ctl_create(comm, ctl) bind(C, name="geopm_ctl_create_f")
             import
             implicit none
-            type(c_ptr), value, intent(in) :: policy
             integer(kind=c_int), value, intent(in) :: comm
             type(c_ptr), intent(out) :: ctl
         end function geopm_ctl_create

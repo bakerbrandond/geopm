@@ -44,7 +44,6 @@
 
 #include "geopm.h"
 #include "geopm_ctl.h"
-#include "geopm_policy.h"
 
 #ifndef NAME_MAX
 #define NAME_MAX 512
@@ -64,7 +63,6 @@ static int run_something(void)
 {
     int err = 0;
     struct geopm_ctl_c *ctl;
-    struct geopm_policy_c *policy;
     double x = 0;
     int num_thread, i, num_iter = 1000000, iter_per_step = 100, chunk_size = 128;
     int step_counter = 0;
@@ -74,28 +72,8 @@ static int run_something(void)
     {
         num_thread = omp_get_num_threads();
     }
-    // In this example we will create the policy, but in general it
-    // should be created prior to application runtime.
-    err = geopm_policy_create("", "profile_policy", &policy);
     if (!err) {
-        err = geopm_policy_mode(policy, GEOPM_POLICY_MODE_PERF_BALANCE_DYNAMIC);
-    }
-    if (!err) {
-        err = geopm_policy_power(policy, 2000);
-    }
-    if (!err) {
-        err = geopm_policy_write(policy);
-    }
-    if (!err) {
-        err = geopm_policy_destroy(policy);
-    }
-    // Now that we have a policy on disk, use it as a normal
-    // application would
-    if (!err) {
-        err = geopm_policy_create("profile_policy", "", &policy);
-    }
-    if (!err) {
-        err = geopm_ctl_create(policy, MPI_COMM_WORLD, &ctl);
+        err = geopm_ctl_create(MPI_COMM_WORLD, &ctl);
     }
     if (!err) {
         err = geopm_ctl_step(ctl);

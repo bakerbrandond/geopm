@@ -35,13 +35,14 @@ AM_CPPFLAGS += -I$(top_srcdir)/src -DGEOPM_PLUGIN_PATH=\"$(pkglibdir)\" -D_POSIX
 
 # THINGS THAT ARE INSTALLED
 lib_LTLIBRARIES = libgeopmpolicy.la
-bin_PROGRAMS = geopmpolicy
+#TODO geopmpolicy_SOURCES ==> geopm_endpoint?
+#bin_PROGRAMS = geopmpolicy
 pkglib_LTLIBRARIES =
 nodist_include_HEADERS =
 
 if ENABLE_MPI
     lib_LTLIBRARIES += libgeopm.la
-    bin_PROGRAMS += geopmctl \
+    bin_PROGRAMS = geopmctl \
                     geopmbench \
                     # end
 if ENABLE_FORTRAN
@@ -64,7 +65,6 @@ include_HEADERS = src/geopm.h \
                   src/geopm_ctl.h \
                   src/geopm_endpoint.h \
                   src/geopm_error.h \
-                  src/geopm_policy.h \
                   src/geopm_message.h \
                   src/geopm_version.h \
                   src/geopm_plugin.h \
@@ -245,7 +245,7 @@ endif
 libgeopmpolicy_la_LDFLAGS = $(AM_LDFLAGS) -version-info $(geopm_abi_version)
 
 # ADD LIBRARY DEPENDENCIES FOR EXECUTABLES
-geopmpolicy_LDADD = libgeopmpolicy.la
+#geopmpolicy_LDADD = libgeopmpolicy.la
 if ENABLE_MPI
     geopmctl_LDADD = libgeopm.la $(MPI_CLIBS)
     geopmbench_LDADD = libgeopm.la $(MPI_CLIBS)
@@ -266,22 +266,16 @@ libgeopmpolicy_la_SOURCES = src/Agent.cpp \
                             src/CombinedSignal.hpp \
                             src/Comm.cpp \
                             src/Comm.hpp \
-                            src/Controller.cpp \
-                            src/Controller.hpp \
                             src/ControlMessage.cpp \
                             src/ControlMessage.hpp \
                             src/CpuinfoIOGroup.cpp \
                             src/CpuinfoIOGroup.hpp \
-                            src/Decider.cpp \
-                            src/Decider.hpp \
                             src/DefaultProfile.cpp \
                             src/Environment.cpp \
                             src/EpochRuntimeRegulator.cpp \
                             src/EpochRuntimeRegulator.hpp \
                             src/Exception.cpp \
                             src/Exception.hpp \
-                            src/GlobalPolicy.cpp \
-                            src/GlobalPolicy.hpp \
                             src/IOGroup.cpp \
                             src/IOGroup.hpp \
                             src/geopm.h \
@@ -301,12 +295,9 @@ libgeopmpolicy_la_SOURCES = src/Agent.cpp \
                             src/geopm_time.h \
                             src/geopm_version.c \
                             src/geopm_version.h \
-                            src/geopm_policy.h \
                             src/Helper.hpp \
                             src/ManagerIO.cpp \
                             src/ManagerIO.hpp \
-                            src/KNLPlatformImp.cpp \
-                            src/KNLPlatformImp.hpp \
                             src/Kontroller.cpp \
                             src/Kontroller.hpp \
                             src/MonitorAgent.cpp \
@@ -322,24 +313,12 @@ libgeopmpolicy_la_SOURCES = src/Agent.cpp \
                             src/msr_snb.cpp \
                             src/OMPT.cpp \
                             src/OMPT.hpp \
-                            src/Platform.cpp \
-                            src/Platform.hpp \
-                            src/PlatformFactory.cpp \
-                            src/PlatformFactory.hpp \
-                            src/PlatformImp.cpp \
-                            src/PlatformImp.hpp \
                             src/PlatformIO.cpp \
                             src/PlatformIO.hpp \
                             src/PlatformIOInternal.hpp \
                             src/PlatformTopo.cpp \
                             src/PlatformTopo.hpp \
-                            src/PlatformTopology.cpp \
-                            src/PlatformTopology.hpp \
                             src/PluginFactory.hpp \
-                            src/Policy.cpp \
-                            src/Policy.hpp \
-                            src/PolicyFlags.cpp \
-                            src/PolicyFlags.hpp \
                             src/Profile.cpp \
                             src/Profile.hpp \
                             src/ProfileIO.cpp \
@@ -354,14 +333,8 @@ libgeopmpolicy_la_SOURCES = src/Agent.cpp \
                             src/ProfileThread.hpp \
                             src/ProfileSampler.cpp \
                             src/ProfileSampler.hpp \
-                            src/RAPLPlatform.cpp \
-                            src/RAPLPlatform.hpp \
-                            src/Region.cpp \
-                            src/Region.hpp \
                             src/Reporter.cpp \
                             src/Reporter.hpp \
-                            src/RuntimeRegulator.cpp \
-                            src/RuntimeRegulator.hpp \
                             src/SampleRegulator.cpp \
                             src/SampleRegulator.hpp \
                             src/SampleScheduler.cpp \
@@ -369,8 +342,6 @@ libgeopmpolicy_la_SOURCES = src/Agent.cpp \
                             src/SharedMemory.cpp \
                             src/SharedMemory.hpp \
                             src/SignalHandler.cpp \
-                            src/StaticPolicyDecider.cpp \
-                            src/StaticPolicyDecider.hpp \
                             src/TimeIOGroup.cpp \
                             src/TimeIOGroup.hpp \
                             src/Tracer.cpp \
@@ -379,10 +350,6 @@ libgeopmpolicy_la_SOURCES = src/Agent.cpp \
                             src/TreeComm.hpp \
                             src/TreeCommLevel.cpp \
                             src/TreeCommLevel.hpp \
-                            src/TreeCommunicator.cpp \
-                            src/TreeCommunicator.hpp \
-                            src/XeonPlatformImp.cpp \
-                            src/XeonPlatformImp.hpp \
                             contrib/json11/json11.cpp \
                             contrib/json11/json11.hpp \
                             src/KprofileIOGroup.cpp \
@@ -395,11 +362,7 @@ libgeopmpolicy_la_SOURCES = src/Agent.cpp \
                             src/ProfileIORuntime.hpp \
                             # end
 
-geopmpolicy_SOURCES = src/geopmpolicy_main.c \
-                      src/geopm_policy.h \
-                      src/geopm_message.h \
-                      src/geopm_version.h \
-                      # end
+#TODO geopmpolicy_SOURCES ==> geopm_endpoint?
 
 if ENABLE_MPI
     # All source files that are compiled into libgeopmpolicy are also
@@ -535,7 +498,8 @@ man/geopmaprun.1: man/geopmpy_launcher.1
 	cp $^ $@
 	if [ -f ronn/geopmpy_launcher.1.html ]; then cp ronn/geopmpy_launcher.1.html ronn/geopmaprun.1.html; fi
 
-checkprogs: gtest-checkprogs pytest-checkprogs $(check_PROGRAMS) $(check_LTLIBRARIES)
+#checkprogs: gtest-checkprogs pytest-checkprogs $(check_PROGRAMS) $(check_LTLIBRARIES)
+checkprogs: gtest-checkprogs $(check_PROGRAMS) $(check_LTLIBRARIES)
 
 # INCLUDES
 check_PROGRAMS =
@@ -556,9 +520,9 @@ PHONY_TARGETS = clean-local \
 include test/Makefile.mk
 include test_integration/Makefile.mk
 include examples/Makefile.mk
-include plugin/Makefile.mk
+#include plugin/Makefile.mk
 include doc/Makefile.mk
-include scripts/Makefile.mk
+#include scripts/Makefile.mk
 include openmp.mk
 
 .PHONY: $(PHONY_TARGETS)
