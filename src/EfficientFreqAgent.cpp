@@ -182,9 +182,9 @@ namespace geopm
         for (size_t sample_idx = 0; sample_idx < m_num_sample; ++sample_idx) {
             out_sample[sample_idx] = m_platform_io.sample(m_sample_idx[sample_idx]);
         }
+        int num_domain = m_platform_topo.num_domain(PlatformTopo::M_DOMAIN_CPU);
+        uint64_t current_region_id = geopm_signal_to_field(m_platform_io.sample(m_region_id_idx));
         if (m_is_adaptive) {
-            int num_domain = m_platform_topo.num_domain(PlatformTopo::M_DOMAIN_CPU);
-            uint64_t current_region_id = geopm_signal_to_field(m_platform_io.sample(m_region_id_idx));
             if (current_region_id != GEOPM_REGION_ID_UNMARKED &&
                 current_region_id != GEOPM_REGION_ID_UNDEFINED) {
                 bool is_region_boundary = m_last_region_id != current_region_id;
@@ -224,6 +224,9 @@ namespace geopm
                     }
                     region_it->second->update_exit();
                 }
+                m_last_region_id = current_region_id;
+            }
+            else {
                 m_last_region_id = current_region_id;
             }
         }
