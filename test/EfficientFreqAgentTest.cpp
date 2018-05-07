@@ -167,15 +167,14 @@ void EfficientFreqAgentTest::TearDown()
 
 TEST_F(EfficientFreqAgentTest, map)
 {
-    EXPECT_CALL(*m_platform_io, adjust(FREQ_IDX, _)).Times(M_NUM_REGIONS * M_NUM_CPU);
+    EXPECT_CALL(*m_platform_io, adjust(FREQ_IDX, _)).Times(M_NUM_REGIONS - 1);
 
-    Sequence mock_seq;
-    for (size_t x = 0; x < M_NUM_REGIONS; x++) {
-        /// @todo expectations for GoverningDecider once implemented
-        EXPECT_CALL(*m_platform_io, sample(REGION_ID_IDX))
-            .InSequence(mock_seq)
-            .WillOnce(Return(geopm_field_to_signal(m_region_hash[x])));
-    }
+    EXPECT_CALL(*m_platform_io, sample(ENERGY_PKG_IDX))
+        .Times(M_NUM_REGIONS)
+        .WillRepeatedly(Return(8888));
+    EXPECT_CALL(*m_platform_io, sample(ENERGY_DRAM_IDX))
+        .Times(M_NUM_REGIONS)
+        .WillRepeatedly(Return(10000));
 
     for (size_t x = 0; x < M_NUM_REGIONS; x++) {
         m_agent->sample_platform(m_sample);
