@@ -190,6 +190,12 @@ TEST_F(EfficientFreqAgentTest, name)
 
 TEST_F(EfficientFreqAgentTest, hint)
 {
+    EXPECT_CALL(*m_platform_io, sample(ENERGY_PKG_IDX))
+        .Times(m_hints.size())
+        .WillRepeatedly(Return(8888));
+    EXPECT_CALL(*m_platform_io, sample(ENERGY_DRAM_IDX))
+        .Times(m_hints.size())
+        .WillRepeatedly(Return(10000));
     for (size_t x = 0; x < m_hints.size(); x++) {
         /// @todo expectations for GoverningDecider once implemented
         EXPECT_CALL(*m_platform_io, sample(REGION_ID_IDX))
