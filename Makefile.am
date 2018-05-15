@@ -375,6 +375,8 @@ libgeopmpolicy_la_SOURCES = src/Agent.cpp \
                             src/ProfileThread.hpp \
                             src/ProfileSampler.cpp \
                             src/ProfileSampler.hpp \
+                            src/PowerGoverningAgent.cpp \
+                            src/PowerGoverningAgent.hpp \
                             src/RAPLPlatform.cpp \
                             src/RAPLPlatform.hpp \
                             src/Region.cpp \

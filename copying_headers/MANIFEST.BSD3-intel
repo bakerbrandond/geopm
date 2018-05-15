@@ -166,6 +166,8 @@ src/Policy.cpp
 src/PolicyFlags.cpp
 src/PolicyFlags.hpp
 src/Policy.hpp
+src/PowerGoverningAgent.cpp
+src/PowerGoverningAgent.hpp
 src/Profile.cpp
 src/Profile.hpp
 src/ProfileIO.cpp
