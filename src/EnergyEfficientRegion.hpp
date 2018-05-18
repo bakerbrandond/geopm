@@ -80,7 +80,7 @@ namespace geopm
                 size_t num_sample;
             };
 
-            std::map<double, struct m_freq_ctx_s> m_freq_ctx_map;
+            std::map<size_t, struct m_freq_ctx_s> m_freq_ctx_map;
             const size_t M_MAX_INCREASE = 4;
 
             double m_freq_step;

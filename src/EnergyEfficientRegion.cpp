@@ -126,8 +126,8 @@ namespace geopm
 
     void EnergyEfficientRegion::update_exit()
     {
-        auto &curr_freq_ctx = m_freq_ctx_map[m_curr_freq];
-        auto step_up_freq_ctx_it = m_freq_ctx_map.find(m_curr_freq + m_freq_step);
+        auto &curr_freq_ctx = m_freq_ctx_map[m_curr_freq / m_freq_step];
+        auto step_up_freq_ctx_it = m_freq_ctx_map.find((m_curr_freq + m_freq_step) / m_freq_step);
         std::cout << __func__ << " m_curr_freq(" << m_curr_freq << ")";
         if (curr_freq_ctx.is_learning) {
             double perf = perf_metric();
