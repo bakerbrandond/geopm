@@ -172,6 +172,7 @@ namespace geopm
                 }
                 else if (m_target != 0.0) {
                     if (curr_freq_ctx.perf_max > m_target) {
+                        /// @todo once working replace this logic with step_up/down_freq_ctx_it deref
                         double next_freq = m_curr_freq - m_freq_step;
                         if (m_allowed_freq.find(next_freq) != m_allowed_freq.end()) {
                             // Performance is in range; lower frequency
@@ -179,6 +180,7 @@ namespace geopm
                         }
                     }
                     else {
+                        /// @todo once working replace this logic with step_up/down_freq_ctx_it deref
                         double next_freq = m_curr_freq + m_freq_step;
                         if (m_allowed_freq.find(next_freq) != m_allowed_freq.end()) {
                             do_increase = true;
