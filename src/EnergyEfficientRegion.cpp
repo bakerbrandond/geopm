@@ -164,25 +164,24 @@ namespace geopm
                 bool do_increase = false;
                 // assume best min energy is at highest freq if energy follows cpu-bound
                 // pattern; otherwise, energy should decrease with frequency.
-                if (step_up_freq_ctx_it != m_freq_ctx_map.end()) {
+                if (m_curr_freq != m_curr_freq_max && step_up_freq_ctx_it != m_freq_ctx_map.end()) {
                     auto step_up_freq_ctx = step_up_freq_ctx_it->second;
-                    if (m_curr_freq != m_curr_freq_max &&
-                        step_up_freq_ctx.energy_min < (1.0 - M_ENERGY_MARGIN) * curr_freq_ctx.energy_min) {
+                    if (step_up_freq_ctx.energy_min < (1.0 - M_ENERGY_MARGIN) * curr_freq_ctx.energy_min) {
                         do_increase = true;
                     }
-                    else if (m_target != 0.0) {
-                        if (curr_freq_ctx.perf_max > m_target) {
-                            double next_freq = m_curr_freq - m_freq_step;
-                            if (m_allowed_freq.find(next_freq) != m_allowed_freq.end()) {
-                                // Performance is in range; lower frequency
-                                m_curr_freq = next_freq;
-                            }
+                }
+                else if (m_target != 0.0) {
+                    if (curr_freq_ctx.perf_max > m_target) {
+                        double next_freq = m_curr_freq - m_freq_step;
+                        if (m_allowed_freq.find(next_freq) != m_allowed_freq.end()) {
+                            // Performance is in range; lower frequency
+                            m_curr_freq = next_freq;
                         }
-                        else {
-                            double next_freq = m_curr_freq + m_freq_step;
-                            if (m_allowed_freq.find(next_freq) != m_allowed_freq.end()) {
-                                do_increase = true;
-                            }
+                    }
+                    else {
+                        double next_freq = m_curr_freq + m_freq_step;
+                        if (m_allowed_freq.find(next_freq) != m_allowed_freq.end()) {
+                            do_increase = true;
                         }
                     }
                 }
