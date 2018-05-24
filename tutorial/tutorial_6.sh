@@ -45,6 +45,7 @@ export LD_LIBRARY_PATH=$GEOPM_LIBDIR:$LD_LIBRARY_PATH
 # create trace files
 if [ "$GEOPM_RM" == "SLURM" ]; then
     # Use GEOPM launcher wrapper script with SLURM's srun
+    GEOPM_AGENT="monitor" \
     geopmsrun  -N 2 \
                -n 8 \
                --geopm-ctl=process \

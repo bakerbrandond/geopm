@@ -177,6 +177,7 @@ namespace geopm
         size_t obj_off = name.find(left_tok);
         size_t addr_off = name.rfind(right_tok);
         if (obj_off == 0 && addr_off != std::string::npos) {
+            /// HERE
             std::string obj_name = name.substr(left_tok.length(), addr_off - left_tok.length());
             std::string addr_str = name.substr(addr_off + right_tok.length());
             size_t addr;

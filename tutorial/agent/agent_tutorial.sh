@@ -40,7 +40,7 @@ export LD_LIBRARY_PATH=$GEOPM_LIBDIR:$LD_LIBRARY_PATH
 
 # ensure both required plugins can be found
 export GEOPM_TUTORIAL=..
-export GEOPM_PLUGIN_PATH=$GEOPM_TUTORIAL/iogroup:$GEOPM_TUTORIAL/agent
+export GEOPM_PLUGIN_PATH=$HOME/tmp/plugin_test
 
 # Run on 2 nodes
 # with 8 MPI ranks

@@ -40,7 +40,9 @@
 #include "IOGroup.hpp"
 #include "PlatformTopo.hpp"
 #include "Exception.hpp"
-#include "config.h"
+
+/// @todo
+#include <iostream>
 
 using geopm::Exception;
 using geopm::IPlatformTopo;
@@ -49,6 +51,7 @@ using geopm::IPlatformTopo;
 // to PlatformIO
 static void register_example_once(void)
 {
+    std::cout << __func__ << " ExampleIOGroup" << std::endl;
     geopm::iogroup_factory().register_plugin(ExampleIOGroup::plugin_name(),
                                              ExampleIOGroup::make_plugin);
 }
@@ -59,7 +62,8 @@ static pthread_once_t g_register_example_once = PTHREAD_ONCE_INIT;
 // Runs when the plugin is first loaded.
 static void __attribute__((constructor)) example_iogroup_load(void)
 {
-    pthread_once(&g_register_example_once, register_example_once);
+    //pthread_once(&g_register_example_once, register_example_once);
+    register_example_once();
 }
 
 // Set up mapping between signal and control names and corresponding indices
