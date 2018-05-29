@@ -99,7 +99,7 @@ static void __attribute__((constructor)) geopmpolicy_load(void)
         }
         else {
             while (del_pos != std::string::npos) {
-                plugin_paths.insert(env_plugin_path_str.substr(start_pos, del_pos - 1));
+                plugin_paths.insert(env_plugin_path_str.substr(start_pos, del_pos));
                 start_pos = del_pos + 1;
                 env_plugin_path_str = env_plugin_path_str.substr(start_pos, std::string::npos);
                 del_pos = env_plugin_path_str.find(":");

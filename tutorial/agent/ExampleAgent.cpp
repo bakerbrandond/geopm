@@ -145,7 +145,7 @@ bool ExampleAgent::adjust_platform(const std::vector<double> &in_policy)
 #endif
     double idle_percent = m_last_sample[M_SAMPLE_IDLE_PCT];
     if (std::isnan(idle_percent) ||
-        std::any_of(in_policy.begin(), in_policy.end(), isnan)) {
+        std::any_of(in_policy.begin(), in_policy.end(), [](double x) { return std::isnan(x); })) {
         return false;
     }
 
