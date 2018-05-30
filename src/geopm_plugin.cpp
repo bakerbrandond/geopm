@@ -47,7 +47,6 @@
 
 #include <set>
 #include <algorithm>
-/// @todo remove
 #include <iostream>
 
 #include "config.h"
@@ -55,7 +54,6 @@
 static int geopm_name_begins_with(std::string str, std::string key)
 {
     int result = str.find(key) == 0;
-    std::cout << "geopm_name_begins_with(" << str << ", " << key << ") returning: " << result << std::endl;
     return result;
 }
 
@@ -64,12 +62,10 @@ static int geopm_name_ends_with(std::string str, std::string key)
     std::reverse(str.begin(), str.end());
     std::reverse(key.begin(), key.end());
     int result = geopm_name_begins_with(str, key);
-    //std::cout << "geopm_name_ends_with(" << str << ", " << key << ") returning: " << result << std::endl;
     return result;
 }
 
-/// @todo make sure to document
-/// @todo remember to deprecate legacy plugin interfaces and structs
+#define GEOPM_LEGACY_PLUGIN_PREFIX "libgeopmpi_"
 #define GEOPM_AGENT_PLUGIN_PREFIX "libgeopmagent"
 #define GEOPM_IOGROUP_PLUGIN_PREFIX "libgeopmiogroup"
 #define GEOPM_COMM_PLUGIN_PREFIX "libgeopmcomm"
@@ -81,8 +77,7 @@ static void __attribute__((constructor)) geopmpolicy_load(void)
     const char *env_plugin_path = geopm_env_plugin_path();
     DIR *did = NULL;
     std::set<std::string> plugin_paths;
-    std::set<std::string> iogroup_plugins;
-    std::set<std::string> agent_plugins;
+    std::set<std::string> plugins;
     std::string so_suffix = ".so." GEOPM_ABI_VERSION;
 
     if (env_plugin_path) {
@@ -107,50 +102,37 @@ static void __attribute__((constructor)) geopmpolicy_load(void)
             /// add the last path
             plugin_paths.insert(env_plugin_path_str);
         }
-        std::cout << plugin_paths.size() << " paths set in env_var" << std::endl;
         for (auto &path : plugin_paths) {
-            std::cout << "parsing path: " << path << " {" << std::endl;
             did = opendir(path.c_str());
             if (did) {
                 struct dirent *entry;
                 char plugin_path[NAME_MAX];
                 plugin_path[NAME_MAX - 1] = '\0';
                 while ((entry = readdir(did))) {
-                    std::cout << " " << entry->d_name;
-                    /// @todo add branch here to search for legacy named plugins
                     if (geopm_name_ends_with(entry->d_name, so_suffix) ||
                         geopm_name_ends_with(entry->d_name, ".dylib")) {
-                        std::cout << "ends with proper postfix";
-                        if (geopm_name_begins_with(std::string(entry->d_name), GEOPM_IOGROUP_PLUGIN_PREFIX)) {
-                            iogroup_plugins.insert(path + "/" + std::string(entry->d_name));
-                            std::cout << " is an iogroup plugin,";
+                        if (geopm_env_do_kontroller()) {
+                            if (geopm_name_begins_with(std::string(entry->d_name), GEOPM_COMM_PLUGIN_PREFIX) ||
+                                geopm_name_begins_with(std::string(entry->d_name), GEOPM_IOGROUP_PLUGIN_PREFIX) ||
+                                geopm_name_begins_with(std::string(entry->d_name), GEOPM_AGENT_PLUGIN_PREFIX)) {
+                                plugins.insert(path + "/" + std::string(entry->d_name));
+                            }
                         }
-                        else if (geopm_name_begins_with(std::string(entry->d_name), GEOPM_AGENT_PLUGIN_PREFIX)) {
-                            agent_plugins.insert(path + "/" +std::string(entry->d_name));
-                            std::cout << " is an agent plugin,";
+                        else {
+                            if (geopm_name_begins_with(std::string(entry->d_name), GEOPM_LEGACY_PLUGIN_PREFIX)) {
+                                plugins.insert(path + "/" + std::string(entry->d_name));
+                            }
                         }
                     }
                 }
                 closedir(did);
-                std::cout << " }" << std::endl;
             }
         }
-        /// first load iogroups such that signals and controls are present for agents
-        /// @todo how to handle interdependent iogroups (combined signals/controls via plugins)
-        for (auto &iogroup : iogroup_plugins) {
-            if (dlopen(iogroup.c_str(), RTLD_NOLOAD) == NULL) {
-                if (NULL == dlopen(iogroup.c_str(), RTLD_LAZY)) {
+        for (auto &plugin : plugins) {
+            if (dlopen(plugin.c_str(), RTLD_NOLOAD) == NULL) {
+                if (NULL == dlopen(plugin.c_str(), RTLD_LAZY)) {
 #ifdef GEOPM_DEBUG
-                    std::cerr << "Warning: failed to dlopen iogroup plugin " << iogroup << std::endl;
-#endif
-                }
-            }
-        }
-        for (auto &agent : agent_plugins) {
-            if (dlopen(agent.c_str(), RTLD_NOLOAD) == NULL) {
-                if (NULL == dlopen(agent.c_str(), RTLD_LAZY)) {
-#ifdef GEOPM_DEBUG
-                    std::cerr << "Warning: failed to dlopen agent plugin " << agent << std::endl;
+                    std::cerr << "Warning: failed to dlopen plugin " << plugin << std::endl;
 #endif
                 }
             }
