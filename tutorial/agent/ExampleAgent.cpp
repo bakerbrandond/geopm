@@ -31,17 +31,13 @@
  */
 
 #include <cmath>
-
 #include <algorithm>
+#include <assert.h>
 
 #include "ExampleAgent.hpp"
 #include "PlatformIO.hpp"
 #include "PlatformTopo.hpp"
 #include "Helper.hpp"
-#include "Exception.hpp"
-
-/// @todo remove
-#include <iostream>
 
 using geopm::Agent;
 using geopm::IPlatformIO;
@@ -51,7 +47,6 @@ using geopm::IPlatformTopo;
 // to the Controller
 static void register_example_once(void)
 {
-    std::cout << __func__ << " ExampleAgent" << std::endl;
     geopm::agent_factory().register_plugin(ExampleAgent::plugin_name(),
                                            ExampleAgent::make_plugin,
                                            Agent::make_dictionary(ExampleAgent::policy_names(),
@@ -64,8 +59,7 @@ static pthread_once_t g_register_example_once = PTHREAD_ONCE_INIT;
 // Runs when the plugin is first loaded.
 static void __attribute__((constructor)) example_agent_load(void)
 {
-    ///pthread_once(&g_register_example_once, register_example_once);
-    register_example_once();
+    pthread_once(&g_register_example_once, register_example_once);
 }
 
 ExampleAgent::ExampleAgent()
@@ -102,12 +96,7 @@ void ExampleAgent::init(int level, const std::vector<int> &fan_in, bool is_level
 bool ExampleAgent::descend(const std::vector<double> &in_policy,
                            std::vector<std::vector<double> >&out_policy)
 {
-#ifdef GEOPM_DEBUG
-    if (in_policy.size() != M_NUM_POLICY) {
-     throw Exception("ExampleAgent::descend(): in_policy vector not correctly sized.",
-                        GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
-    }
-#endif
+    assert(in_policy.size() == M_NUM_POLICY);
     for (auto &child_pol : out_policy) {
         child_pol = in_policy;
     }
@@ -118,12 +107,7 @@ bool ExampleAgent::descend(const std::vector<double> &in_policy,
 bool ExampleAgent::ascend(const std::vector<std::vector<double> > &in_sample,
                           std::vector<double> &out_sample)
 {
-#ifdef GEOPM_DEBUG
-    if (out_sample.size() != M_NUM_SAMPLE) {
-        throw Exception("ExampleAgent::ascend(): out_sample vector not correctly sized.",
-                        GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
-    }
-#endif
+    assert(out_sample.size() == M_NUM_SAMPLE);
     std::vector<double> child_sample(in_sample.size());
     for (size_t sample_idx = 0; sample_idx < M_NUM_SAMPLE; ++sample_idx) {
         for (size_t child_idx = 0; child_idx < in_sample.size(); ++child_idx) {
@@ -137,12 +121,7 @@ bool ExampleAgent::ascend(const std::vector<std::vector<double> > &in_sample,
 // Print idle percentage to either standard out or standard error
 bool ExampleAgent::adjust_platform(const std::vector<double> &in_policy)
 {
-#ifdef GEOPM_DEBUG
-    if (in_policy.size() != M_NUM_POLICY) {
-     throw Exception("ExampleAgent::adjust_platform(): in_policy vector not correctly sized.",
-                     GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
-    }
-#endif
+    assert(in_policy.size() == M_NUM_POLICY);
     double idle_percent = m_last_sample[M_SAMPLE_IDLE_PCT];
     if (std::isnan(idle_percent) ||
         std::any_of(in_policy.begin(), in_policy.end(), [](double x) { return std::isnan(x); })) {
@@ -164,12 +143,7 @@ bool ExampleAgent::adjust_platform(const std::vector<double> &in_policy)
 // Read signals from the platform and calculate samples to be sent up
 bool ExampleAgent::sample_platform(std::vector<double> &out_sample)
 {
-#ifdef GEOPM_DEBUG
-    if (out_sample.size() != M_NUM_SAMPLE) {
-        throw Exception("ExampleAgent::sample_platform(): out_sample vector not correctly sized.",
-                        GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
-    }
-#endif
+    assert(out_sample.size() == M_NUM_SAMPLE);
     // Collect latest times from platform signals
     double total = 0.0;
     for (auto signal_idx : m_signal_idx) {
