@@ -71,8 +71,6 @@ static int geopm_name_ends_with(std::string str, std::string key)
 #define GEOPM_COMM_PLUGIN_PREFIX "libgeopmcomm"
 static void __attribute__((constructor)) geopmpolicy_load(void)
 {
-    int err = 0;
-    char err_msg[NAME_MAX];
     std::string env_plugin_path_str;
     const char *env_plugin_path = geopm_env_plugin_path();
     DIR *did = NULL;
@@ -106,8 +104,6 @@ static void __attribute__((constructor)) geopmpolicy_load(void)
             did = opendir(path.c_str());
             if (did) {
                 struct dirent *entry;
-                char plugin_path[NAME_MAX];
-                plugin_path[NAME_MAX - 1] = '\0';
                 while ((entry = readdir(did))) {
                     if (geopm_name_ends_with(entry->d_name, so_suffix) ||
                         geopm_name_ends_with(entry->d_name, ".dylib")) {
