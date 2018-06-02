@@ -294,6 +294,7 @@ test/PlatformTopologyTest.cpp
 test/PlatformTopoTest.cpp
 test/pmpi_mock.c
 test/PolicyTest.cpp
+test/PowerBalancerAgentTest.cpp
 test/ProfileIOGroupTest.cpp
 test/ProfileIOSampleTest.cpp
 test/ProfileTableTest.cpp

@@ -76,6 +76,7 @@ namespace geopm
             };
 
             PowerBalancerAgent();
+            PowerBalancerAgent(IPlatformIO &platform_io, IPlatformTopo &platform_topo);
             virtual ~PowerBalancerAgent();
             void init(int level, const std::vector<int> &fan_in, bool is_level_root) override;
             bool descend(const std::vector<double> &in_policy,
@@ -94,7 +95,9 @@ namespace geopm
             static std::unique_ptr<Agent> make_plugin(void);
             static std::vector<std::string> policy_names(void);
             static std::vector<std::string> sample_names(void);
+
         private:
+            // todo: see if these can be tested without making public
             void init_platform_io(void);
             bool descend_initial_budget(double power_budget_in, std::vector<double> &power_budget_out);
             bool descend_updated_budget(double power_budget_in, std::vector<double> &power_budget_out);
@@ -104,6 +107,7 @@ namespace geopm
             std::vector<double> split_budget_helper(double avg_power_budget,
                                                     double min_power_budget,
                                                     double max_power_budget);
+        private:
 
             IPlatformIO &m_platform_io;
             IPlatformTopo &m_platform_topo;

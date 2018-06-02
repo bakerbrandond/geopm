@@ -328,6 +328,7 @@ GTEST_TESTS = test/gtest_links/PlatformFactoryTest.platform_register \
               test/gtest_links/EpochRuntimeRegulatorTest.rank_0_enter_exit \
               test/gtest_links/EpochRuntimeRegulatorTest.all_ranks_enter_exit \
               test/gtest_links/EpochRuntimeRegulatorTest.epoch_runtime \
+              test/gtest_links/PowerBalancerAgentTest.soemthing \
               # end
 
 if ENABLE_MPI
@@ -445,6 +446,7 @@ test_geopm_test_SOURCES = test/geopm_test.cpp \
                           test/MockProfileIORuntime.hpp \
                           test/KruntimeRegulatorTest.cpp \
                           test/EpochRuntimeRegulatorTest.cpp \
+                          test/PowerBalancerAgentTest.cpp \
                           # end
 
 test_geopm_test_LDADD = libgtest.a \

@@ -43,11 +43,19 @@
 #include "Helper.hpp"
 #include "config.h"
 
+//todo remove
+#include <iostream>
 namespace geopm
 {
     PowerBalancerAgent::PowerBalancerAgent()
-        : m_platform_io(platform_io())
-        , m_platform_topo(platform_topo())
+        : PowerBalancerAgent(platform_io(), platform_topo())
+    {
+
+    }
+
+    PowerBalancerAgent::PowerBalancerAgent(IPlatformIO &platform_io, IPlatformTopo &platform_topo)
+        : m_platform_io(platform_io)
+        , m_platform_topo(platform_topo)
         , m_level(-1)
         , m_is_converged(false)
         , m_is_sample_stable(false)
@@ -88,6 +96,12 @@ namespace geopm
         if (m_level == 0) {
             init_platform_io(); // Only do this at the leaf level.
         }
+        // Setup sample aggregation for data going up the tree
+        m_agg_func.push_back(IPlatformIO::agg_max);     // EPOCH_RUNTIME
+        m_agg_func.push_back(IPlatformIO::agg_average); // POWER
+        m_agg_func.push_back(IPlatformIO::agg_and);     // IS_CONVERGED
+
+
         m_num_children = fan_in[level];
         m_is_root = is_root;
         m_last_runtime0.resize(m_num_children, NAN);
@@ -123,10 +137,6 @@ namespace geopm
             m_control_idx.push_back(control_idx);
         }
 
-        // Setup sample aggregation for data going up the tree
-        m_agg_func.push_back(IPlatformIO::agg_max);     // EPOCH_RUNTIME
-        m_agg_func.push_back(IPlatformIO::agg_average); // POWER
-        m_agg_func.push_back(IPlatformIO::agg_and);     // IS_CONVERGED
     }
 
 
@@ -160,11 +170,21 @@ namespace geopm
     bool PowerBalancerAgent::descend_updated_runtimes(double power_budget_in, std::vector<double> &power_budget_out)
     {
         bool result = false;
+        std::cout << "DBG updated runtimes: samplestable=" << m_is_sample_stable
+                  << " isconverged=" << m_is_converged
+                  << " numconverged=" << m_num_converged
+                  << " numoutofrange=" << m_num_out_of_range << std::endl;
         if (m_is_sample_stable) {
-            // All children have reported convergance in ascend().
+            // All children have reported convergence in ascend().
             double stddev_child_runtime = IPlatformIO::agg_stddev(m_last_runtime0);
             // We are out of bounds increment out of range counter
-            if (m_is_converged && (stddev_child_runtime > m_convergence_target)) {
+            std::cout << "stddev " << stddev_child_runtime << std::endl;
+
+            // TODO: can't increase m_num_out_of_range until m_is_converged becomes true (first if branch)
+            // but m_is_converged won't be set to true until stddev is below convergence target.
+            // I think this should be !m_is_converged...
+            // TODO: is m_num_out_of_range supposed to be count of children? or number of out of range samples?
+            if (!m_is_converged && (stddev_child_runtime > m_convergence_target)) {
                 ++m_num_out_of_range;
             }
             // We are within bounds.
@@ -175,6 +195,9 @@ namespace geopm
                     m_is_converged = true;
                 }
             }
+            std::cout << "DBG isconverged=" << m_is_converged
+                      << " numconverged=" << m_num_converged
+                      << " numoutofrange=" << m_num_out_of_range << std::endl;
             if (m_num_out_of_range >= m_min_num_converged) {
                 // All children have reported that they have
                 // converged (m_is_sample_stable), but the
@@ -215,22 +238,35 @@ namespace geopm
         std::vector<double> power_budget_out(m_num_children, NAN);
 
         if (std::isnan(m_last_power_budget_in)) {
+            std::cout << "DBG initial split; ";
             // Haven't yet recieved a budget split for the first time
             result = descend_initial_budget(power_budget_in, power_budget_out);
+            m_last_power_budget_in = power_budget_in;
+            std::cout << result << std::endl;
         }
         else if (m_last_power_budget_in != power_budget_in) {
+            std::cout << "DBG updated budget" << std::endl;
             // The incoming power budget has changed, restart the
             // algorithm
             result = descend_updated_budget(power_budget_in, power_budget_out);
         }
-        else if (m_ascend_count == 1) {
+        //TODO: DRG: is this supposed to be !=?
+        else if (m_ascend_count != 1) {
+            std::cout << "DBG updated runtimes; ";
             // Not the first descent and the runtimes may have been
             // updated.
             result = descend_updated_runtimes(power_budget_in, power_budget_out);
+            std::cout << result  << std::endl;
         }
-        // Convert power budget vector into a vector of policy vectors
-        for (int child_idx = 0; child_idx != m_num_children; ++child_idx) {
-            policy_out[child_idx][M_POLICY_POWER] = power_budget_out[child_idx];
+        else {
+            std::cout << "DBG descend not updating" << std::endl;
+            // TODO: in this case, power_budget_out is all nan
+        }
+        if (result) {
+            // Convert power budget vector into a vector of policy vectors
+            for (int child_idx = 0; child_idx != m_num_children; ++child_idx) {
+                policy_out[child_idx][M_POLICY_POWER] = power_budget_out[child_idx];
+            }
         }
         return result;
     }
@@ -241,6 +277,10 @@ namespace geopm
 #ifdef GEOPM_DEBUG
         if (out_sample.size() != M_NUM_SAMPLE) {
             throw Exception("PowerBalancerAgent::" + std::string(__func__) + "(): out_sample vector not correctly sized.",
+                            GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
+        }
+        if (in_sample.size() != (size_t)m_num_children) {
+            throw Exception("PowerBalancerAgent::" + std::string(__func__) + "(): in_sample vector not correctly sized.",
                             GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
         }
 #endif
@@ -267,6 +307,7 @@ namespace geopm
         // Increment the ascend counter if the children are stable.
         if (m_is_sample_stable) {
             ++m_ascend_count;
+            std::cout << "DBG new ascend count: " << m_ascend_count << std::endl;
             if (m_ascend_count == m_ascend_period) {
                 m_ascend_count = 0;
             }
@@ -350,7 +391,7 @@ namespace geopm
 
             /// @todo fix me, should be as above, but we need the
             /// EPOCH_ENERGY signal which doens't currently exist
-            m_epoch_power_buf->insert(m_sample[M_PLAT_SIGNAL_EPOCH_RUNTIME]);
+            m_epoch_power_buf->insert(m_sample[M_PLAT_SIGNAL_PKG_POWER] + m_sample[M_PLAT_SIGNAL_DRAM_POWER]);
 
             // If we have observed more than m_min_num_converged epoch
             // calls then send median filtered time and power values
@@ -408,8 +449,8 @@ namespace geopm
     }
 
     std::vector<double> PowerBalancerAgent::split_budget_helper(double avg_power_budget,
-                                                            double min_power_budget,
-                                                            double max_power_budget)
+                                                                double min_power_budget,
+                                                                double max_power_budget)
     {
         // Fit a line to runtime as a function of budget for each
         // child.  Find the budget value for each child such that the
