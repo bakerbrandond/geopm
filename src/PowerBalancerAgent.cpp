@@ -43,8 +43,6 @@
 #include "Helper.hpp"
 #include "config.h"
 
-//todo remove
-#include <iostream>
 namespace geopm
 {
     PowerBalancerAgent::PowerBalancerAgent()
@@ -170,15 +168,10 @@ namespace geopm
     bool PowerBalancerAgent::descend_updated_runtimes(double power_budget_in, std::vector<double> &power_budget_out)
     {
         bool result = false;
-        std::cout << "DBG updated runtimes: samplestable=" << m_is_sample_stable
-                  << " isconverged=" << m_is_converged
-                  << " numconverged=" << m_num_converged
-                  << " numoutofrange=" << m_num_out_of_range << std::endl;
         if (m_is_sample_stable) {
             // All children have reported convergence in ascend().
             double stddev_child_runtime = IPlatformIO::agg_stddev(m_last_runtime0);
             // We are out of bounds increment out of range counter
-            std::cout << "stddev " << stddev_child_runtime << std::endl;
 
             // TODO: can't increase m_num_out_of_range until m_is_converged becomes true (first if branch)
             // but m_is_converged won't be set to true until stddev is below convergence target.
@@ -195,9 +188,6 @@ namespace geopm
                     m_is_converged = true;
                 }
             }
-            std::cout << "DBG isconverged=" << m_is_converged
-                      << " numconverged=" << m_num_converged
-                      << " numoutofrange=" << m_num_out_of_range << std::endl;
             if (m_num_out_of_range >= m_min_num_converged) {
                 // All children have reported that they have
                 // converged (m_is_sample_stable), but the
@@ -242,24 +232,19 @@ namespace geopm
             // Haven't yet recieved a budget split for the first time
             result = descend_initial_budget(power_budget_in, power_budget_out);
             m_last_power_budget_in = power_budget_in;
-            std::cout << result << std::endl;
         }
         else if (m_last_power_budget_in != power_budget_in) {
-            std::cout << "DBG updated budget" << std::endl;
             // The incoming power budget has changed, restart the
             // algorithm
             result = descend_updated_budget(power_budget_in, power_budget_out);
         }
         //TODO: DRG: is this supposed to be !=?
         else if (m_ascend_count != 1) {
-            std::cout << "DBG updated runtimes; ";
             // Not the first descent and the runtimes may have been
             // updated.
             result = descend_updated_runtimes(power_budget_in, power_budget_out);
-            std::cout << result  << std::endl;
         }
         else {
-            std::cout << "DBG descend not updating" << std::endl;
             // TODO: in this case, power_budget_out is all nan
         }
         if (result) {
@@ -307,7 +292,6 @@ namespace geopm
         // Increment the ascend counter if the children are stable.
         if (m_is_sample_stable) {
             ++m_ascend_count;
-            std::cout << "DBG new ascend count: " << m_ascend_count << std::endl;
             if (m_ascend_count == m_ascend_period) {
                 m_ascend_count = 0;
             }
