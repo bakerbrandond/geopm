@@ -51,6 +51,303 @@
 
 #include "config.h"
 
+extern "C" {
+    ///@todo document caller must free lens array and individual strings
+    int geopm_platform_io_signal_names(int *num_signals, int **signal_lens, char ***signal_names)
+    {
+        int err = 0;
+        if (NULL == num_signals || NULL == signal_lens || NULL == signal_names) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                std::set<std::string> signals = geopm::platform_io().signal_names();
+                *num_signals = signals.size();
+                *signal_lens = (int *) malloc(*num_signals * sizeof(int));
+                char **tmp_arr  = (char **) malloc(*num_signals * sizeof(char*));
+                int idx = 0;
+                for (auto &signal : signals) {
+                    int str_len = signal.size();
+                    memcpy(*signal_lens + idx, &str_len, sizeof(int));
+                    char *tmp_str = (char *) malloc((str_len + 1) * sizeof(char));
+                    strcpy(tmp_str, signal.c_str());
+                    tmp_arr[idx] = tmp_str;
+                    idx++;
+                }
+                *signal_names = tmp_arr;
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    ///@todo document caller must free lens array and individual strings
+    int geopm_platform_io_control_names(int *num_controls, int **control_lens, char ***control_names)
+    {
+        int err = 0;
+        if (NULL == num_controls || NULL == control_lens || NULL == control_names) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                std::set<std::string> controls = geopm::platform_io().control_names();
+                *num_controls = controls.size();
+                *control_lens = (int *) malloc(*num_controls * sizeof(int));
+                char **tmp_arr = (char **) malloc(*num_controls * sizeof(char*));
+                int idx = 0;
+                for (auto &control : controls) {
+                    auto str_len = control.size();
+                    memcpy(*control_lens + idx, &str_len, sizeof(int));
+                    char *tmp_str = (char *) malloc((str_len + 1) * sizeof(char));
+                    strcpy(tmp_str, control.c_str());
+                    tmp_arr[idx] = tmp_str;
+                    idx++;
+                }
+                *control_names = tmp_arr;
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_io_signal_domain_type(int signal_str_len, const char *signal_name, int *domain_type)
+    {
+        int err = 0;
+        if (NULL == signal_name || NULL == domain_type) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                *domain_type = geopm::platform_io().signal_domain_type(std::string(signal_name));
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_io_control_domain_type(int control_str_len, const char *control_name, int *domain_type)
+    {
+        int err = 0;
+        if (NULL == control_name || NULL == domain_type) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                *domain_type = geopm::platform_io().control_domain_type(std::string(control_name));
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_io_push_signal(int signal_str_len, const char *signal_name, int domain_type, int domain_idx, int *signal_idx)
+    {
+        int err = 0;
+        if (NULL == signal_name || NULL == signal_idx) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                *signal_idx = geopm::platform_io().push_signal(std::string(signal_name), domain_type, domain_idx);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_io_push_combined_signal(int signal_str_len, const char *signal_name, int domain_type, int domain_idx,
+            int num_sub_signal, const int *sub_signal_idx, int *combined_signal_idx)
+    {
+        int err = 0;
+        if (NULL == signal_name || NULL == sub_signal_idx || NULL == combined_signal_idx) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                std::vector<int> tmp;
+                tmp.assign(sub_signal_idx, sub_signal_idx + num_sub_signal);
+                *combined_signal_idx = geopm::platform_io().push_combined_signal(std::string(signal_name), domain_type, domain_idx, tmp);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_io_push_control(int control_str_len, const char *control_name, int domain_type, int domain_idx, int *control_idx)
+    {
+        int err = 0;
+        if (NULL == control_name || NULL == control_idx) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                *control_idx = geopm::platform_io().push_control(std::string(control_name), domain_type, domain_idx);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_io_num_pushed_signal(int *num_signals)
+    {
+        int err = 0;
+        if (NULL == num_signals) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                *num_signals = geopm::platform_io().num_signal();
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_io_num_pushed_control(int *num_controls)
+    {
+        int err = 0;
+        if (NULL == num_controls) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                *num_controls = geopm::platform_io().num_control();
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_io_sample(int signal_idx, double *value)
+    {
+        int err = 0;
+        if (NULL == value) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                *value = geopm::platform_io().sample(signal_idx);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_io_adjust(int control_idx, double setting)
+    {
+        int err = 0;
+        try {
+            geopm::platform_io().adjust(control_idx, setting);
+        }
+        catch (...) {
+            err = geopm::exception_handler(std::current_exception(), true);
+        }
+        return err;
+    }
+
+    int geopm_platform_io_read_batch(void)
+    {
+        int err = 0;
+        try {
+            geopm::platform_io().read_batch();
+        }
+        catch (...) {
+            err = geopm::exception_handler(std::current_exception(), true);
+        }
+        return err;
+    }
+
+    int geopm_platform_io_write_batch(void)
+    {
+        int err = 0;
+        try {
+            geopm::platform_io().write_batch();
+        }
+        catch (...) {
+            err = geopm::exception_handler(std::current_exception(), true);
+        }
+        return err;
+    }
+
+    int geopm_platform_io_read_signal(int signal_str_len, const char *signal_name, int domain_type, int domain_idx, double *value)
+    {
+        int err = 0;
+        if (NULL == signal_name || NULL == value) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                *value = geopm::platform_io().read_signal(std::string(signal_name), domain_type, domain_idx);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_io_write_control(int control_str_len, const char *control_name, int domain_type, int domain_idx, double setting)
+    {
+        int err = 0;
+        if (NULL == control_name) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                geopm::platform_io().write_control(std::string(control_name), domain_type, domain_idx, setting);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_io_save_control(void)
+    {
+        int err = 0;
+        try {
+            geopm::platform_io().save_control();
+        }
+        catch (...) {
+            err = geopm::exception_handler(std::current_exception(), true);
+        }
+        return err;
+    }
+
+    int geopm_platform_io_restore_control(void)
+    {
+        int err = 0;
+        try {
+            geopm::platform_io().restore_control();
+        }
+        catch (...) {
+            err = geopm::exception_handler(std::current_exception(), true);
+        }
+        return err;
+    }
+}
+
 namespace geopm
 {
     IPlatformIO &platform_io(void)

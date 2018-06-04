@@ -68,6 +68,8 @@ include_HEADERS = src/geopm.h \
                   src/geopm_ctl.h \
                   src/geopm_endpoint.h \
                   src/geopm_error.h \
+                  src/geopm_platform_io.h \
+                  src/geopm_platform_topo.h \
                   src/geopm_policy.h \
                   src/geopm_message.h \
                   src/geopm_version.h \
@@ -339,6 +341,8 @@ libgeopmpolicy_la_SOURCES = src/Agent.cpp \
                             src/geopm_hash.h \
                             src/geopm_message.c \
                             src/geopm_message.h \
+                            src/geopm_platform_io.h \
+                            src/geopm_platform_topo.h \
                             src/geopm_plugin.c \
                             src/geopm_plugin.h \
                             src/geopm_sched.c \
