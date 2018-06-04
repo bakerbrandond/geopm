@@ -51,6 +51,106 @@
 
 #include "config.h"
 
+extern "C" {
+    ///@todo??? opaque struct song and dance? or should registration be done in C++?
+    //void register_iogroup(std::shared_ptr<IOGroup> iogroup);
+    int geopm_platform_io_signal_names(int *num_signals, char *signal_names[])
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_control_names(int *num_controls, char *control_names[])
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_signal_domain_type(int signal_str_len, const char *signal_name, int *domain_type)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_control_domain_type(int control_str_len, const char *control_name, int *domain_type)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_push_signal(int signal_str_len, const char *signal_name, int domain_type, int domain_idx, int *signal_idx)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_push_region_signal_total(int signal_idx, int domain_type, int domain_idx)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_push_combined_signal(int signal_str_len, const char *signal_name, int domain_type, int domain_idx,
+            int num_sub_signal, const int sub_signal_idx[], int *combined_signal_idx)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_push_control(int control_str_len, const char *control_name, int domain_type, int domain_idx, int *control_idx)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_num_pushed_signal(int *num_signals)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_num_pushed_control(int *num_controls)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_sample(int signal_idx, double *value)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_sample_region_total(int signal_idx, uint64_t region_id, double *value)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_adjust(int control_idx, double setting)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_read_batch(void)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_write_batch(void)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_read_signal(int signal_str_len, const char *signal_name, int domain_type, int domain_idx, double *value)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_write_control(int control_str_len, const char *control_name, int domain_type, int domain_idx, double setting)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_save_control(void)
+    {
+        return -1;
+    }
+
+    int geopm_platform_io_restore_control(void)
+    {
+        return -1;
+    }
+}
+
 namespace geopm
 {
     IPlatformIO &platform_io(void)

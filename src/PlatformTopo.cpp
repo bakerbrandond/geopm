@@ -32,6 +32,7 @@
 #include <signal.h>
 #include <map>
 #include <sstream>
+#include <cstring>
 #include <string>
 
 #include "geopm_sched.h"
@@ -39,6 +40,144 @@
 #include "Exception.hpp"
 
 #include "config.h"
+
+extern "C"
+{
+    int geopm_platform_topo_num_domain(int domain_type, int *num_domain)
+    {
+        int err = 0;
+        if (NULL == num_domain) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                *num_domain = geopm::platform_topo().num_domain(domain_type);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_topo_domain_cpus(int domain_type, int domain_idx, int num_domain, int *cpu_idx)
+    {
+        int err = 0;
+        if (NULL == cpu_idx) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                std::set<int> tmp;
+                geopm::platform_topo().domain_cpus(domain_type, domain_idx, tmp);
+                if (tmp.size() > (size_t) num_domain) {
+                    ///@todo throw
+                }
+                size_t idx = 0;
+                for (auto &tmp_ent : tmp) {
+                    cpu_idx[idx] = tmp_ent;
+                    idx++;
+                }
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_topo_domain_idx(int domain_type, int cpu_idx, int *domain_idx)
+    {
+        int err = 0;
+        if (NULL == domain_idx) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                *domain_idx = geopm::platform_topo().domain_idx(domain_type, cpu_idx);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_topo_define_cpu_group(int num_cpu, const int cpu_domain_idx[], int *cpu_group_idx)
+    {
+        int err = 0;
+        if (NULL == cpu_domain_idx || NULL == cpu_group_idx) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                std::vector<int> tmp;
+                tmp.assign(cpu_domain_idx, cpu_domain_idx + num_cpu);
+                *cpu_group_idx = geopm::platform_topo().define_cpu_group(tmp);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_topo_is_domain_within(int inner_domain, int outer_domain, bool *is_within)
+    {
+        int err = 0;
+        if (NULL == is_within) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                *is_within = geopm::platform_topo().is_domain_within(inner_domain, outer_domain);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_topo_domain_type_to_name(int domain_type, int str_len, char *domain_name)
+    {
+        int err = 0;
+        if (NULL == domain_name) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                std::string tmp = geopm::platform_topo().domain_type_to_name(domain_type);
+                if (tmp.size() > (size_t) str_len) {
+                    ///@todo throw
+                }
+                strcpy(domain_name, tmp.c_str());
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_platform_topo_domain_name_to_type(int str_len, const char *domain_name, int *domain_type)
+    {
+        int err = 0;
+        if (NULL == domain_name || NULL == domain_type) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                std::string tmp(domain_name);
+                *domain_type = geopm::platform_topo().domain_name_to_type(tmp);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+}
 
 namespace geopm
 {
