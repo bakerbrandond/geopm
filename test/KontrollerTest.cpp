@@ -193,6 +193,8 @@ TEST_F(KontrollerTest, single_node)
     // single node Kontroller should not send anything via TreeComm
     EXPECT_EQ(0, m_tree_comm->num_send());
     EXPECT_EQ(0, m_tree_comm->num_recv());
+
+    EXPECT_CALL(m_platform_io, restore_control());
 }
 
 // controller with only leaf responsibilities
@@ -258,6 +260,8 @@ TEST_F(KontrollerTest, two_level_controller_1)
 
     EXPECT_NE(0, m_tree_comm->num_send());
     EXPECT_NE(0, m_tree_comm->num_recv());
+
+    EXPECT_CALL(m_platform_io, restore_control());
 }
 
 // controller with leaf and tree responsibilities, but not at the root
@@ -275,7 +279,7 @@ TEST_F(KontrollerTest, two_level_controller_2)
     for (int level = 0; level < num_level_ctl; ++level) {
         EXPECT_CALL(*m_tree_comm, level_size(level)).WillOnce(Return(fan_out[level]));
     }
-    for (int level = 0; level < num_level_ctl + 1; ++level) {
+    for (int level = 0; level < num_level_ctl; ++level) {
         auto tmp = new MockAgent();
         EXPECT_CALL(*tmp, init(level, fan_out, true));
         tmp->init(level, fan_out, true);
@@ -283,7 +287,7 @@ TEST_F(KontrollerTest, two_level_controller_2)
 
         m_agents.emplace_back(m_level_agent[level]);
     }
-    ASSERT_EQ(2u, m_level_agent.size());
+    ASSERT_EQ(1u, m_level_agent.size());
 
     Kontroller kontroller(m_comm, m_platform_io,
                           m_agent_name, m_num_send_down, m_num_send_up,
@@ -339,6 +343,8 @@ TEST_F(KontrollerTest, two_level_controller_2)
 
     EXPECT_NE(0, m_tree_comm->num_send());
     EXPECT_NE(0, m_tree_comm->num_recv());
+
+    EXPECT_CALL(m_platform_io, restore_control());
 }
 
 // controller with responsibilities at all levels of the tree
@@ -419,4 +425,6 @@ TEST_F(KontrollerTest, two_level_controller_0)
 
     EXPECT_NE(0, m_tree_comm->num_send());
     EXPECT_NE(0, m_tree_comm->num_recv());
+
+    EXPECT_CALL(m_platform_io, restore_control());
 }

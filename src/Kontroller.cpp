@@ -252,7 +252,6 @@ namespace geopm
             do_send = m_tree_comm->receive_down(m_num_level_ctl, m_in_policy);
         }
         for (int level = m_num_level_ctl - 1; level != -1; --level) {
-            std::cout << "down level=" << level << " do_send=" << do_send << std::endl;
             if (do_send) {
                 do_send = m_agent[level]->descend(m_in_policy, m_out_policy[level]);
             }
@@ -278,7 +277,6 @@ namespace geopm
         m_application_io->clear_region_info();
 
         for (int level = 0; level != m_num_level_ctl; ++level) {
-            std::cout << "up level=" << level << " do_send=" << do_send << std::endl;
             if (do_send) {
                 m_tree_comm->send_up(level, m_out_sample);
             }

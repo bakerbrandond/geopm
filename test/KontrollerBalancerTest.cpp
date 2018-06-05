@@ -176,12 +176,14 @@ class KontrollerBalancerTest : public ::testing::Test
         std::vector<std::unique_ptr<Agent> > m_agents;
         MockManagerIOSampler *m_manager_io;
 
-        int m_num_step = 5;
+        int m_num_step = 500;
         std::list<geopm_region_info_s> m_region_info;
         std::vector<std::pair<std::string, std::string> > m_agent_report;
         std::map<uint64_t, std::vector<std::pair<std::string, std::string> > > m_region_names;
         double m_energy_package = 0.0;
         double m_power_budget = 200;
+        double m_power_min = 50;
+        double m_power_max = 300;
         int m_power_control_idx = -1;
 
         int m_samples_per_control = 10;  // should match agent
@@ -189,8 +191,8 @@ class KontrollerBalancerTest : public ::testing::Test
 
 void KontrollerBalancerTest::SetUp()
 {
-    m_platform_io.add_supported_signal({"POWER_PACKAGE_MIN", IPlatformTopo::M_DOMAIN_PACKAGE, 0}, 99);
-    m_platform_io.add_supported_signal({"POWER_PACKAGE_MAX", IPlatformTopo::M_DOMAIN_PACKAGE, 0}, 199);
+    m_platform_io.add_supported_signal({"POWER_PACKAGE_MIN", IPlatformTopo::M_DOMAIN_PACKAGE, 0}, m_power_min);
+    m_platform_io.add_supported_signal({"POWER_PACKAGE_MAX", IPlatformTopo::M_DOMAIN_PACKAGE, 0}, m_power_max);
 
     m_power_control_idx = m_platform_io.add_supported_control({"POWER_PACKAGE", IPlatformTopo::M_DOMAIN_BOARD, 0});
 
@@ -293,7 +295,6 @@ TEST_F(KontrollerBalancerTest, two_level_controller_1)
     EXPECT_CALL(*m_tree_comm, root_level())
         .WillOnce(Return(root_level));
 
-
     std::vector<double> epoch_runtime;
     std::vector<double> epoch_count;
     std::vector<double> power_package;
@@ -368,18 +369,18 @@ TEST_F(KontrollerBalancerTest, two_level_controller_2)
         EXPECT_CALL(*m_tree_comm, level_size(level)).WillOnce(Return(fan_out[level]));
     }
 
-
     std::vector<double> epoch_runtime;
     std::vector<double> epoch_count;
     std::vector<double> power_package;
     std::vector<double> power_dram;
+    double dram_power = 12.0;
     for (int step = 0; step < m_num_step; ++step) {
         // 1 extra sample to handle power correctly
         for (int sample = 0; sample < m_samples_per_control + 1; ++sample) {
-            epoch_runtime.push_back(50.0 + 10*step + sample);
+            epoch_runtime.push_back(50.0 + (sample*0.0001));
             epoch_count.push_back(step);
-            power_package.push_back(300.0 + 10*step + sample);
-            power_dram.push_back(12.0 * step);
+            power_package.push_back(300.0);
+            power_dram.push_back(dram_power);
         }
     }
     m_platform_io.add_varying_signal({"EPOCH_RUNTIME", IPlatformTopo::M_DOMAIN_BOARD, 0},
@@ -392,7 +393,6 @@ TEST_F(KontrollerBalancerTest, two_level_controller_2)
                                      power_dram);
 
 
-    // TODO: this +1 can be removed in the base KontrollerTest too.
     for (int level = 0; level < num_level_ctl; ++level) {
         auto tmp = new PowerBalancerAgent(m_platform_io, m_platform_topo);
         tmp->init(level, fan_out, true);
@@ -401,9 +401,6 @@ TEST_F(KontrollerBalancerTest, two_level_controller_2)
         m_agents.emplace_back(m_level_agent[level]);
     }
     ASSERT_EQ(1u, m_level_agent.size());
-
-
-
 
     // should not interact with manager io
     EXPECT_CALL(*m_manager_io, sample()).Times(0);
@@ -420,21 +417,21 @@ TEST_F(KontrollerBalancerTest, two_level_controller_2)
     kontroller.setup_trace();
 
     // mock parent sending to this child
-    std::vector<std::vector<double> > policy = {{m_power_budget - 6.0}, {m_power_budget + 6.0}};
+    double parent_policy_offset = 6.0;
+    std::vector<std::vector<double> > policy = {{m_power_budget - parent_policy_offset},
+                                                {m_power_budget + parent_policy_offset}};
     m_tree_comm->send_down(num_level_ctl, policy);
 
 
     for (int step = 0; step < m_num_step; ++step) {
         // mock other child
-        std::vector<double> sample = {78.0 + step, 67.0 + step, true};
+        std::vector<double> sample = {100.0 + (step *0.0001), 67.0, true};
         m_tree_comm->send_up_mock_child(0, 1, sample);
-
-
         for (int sample = 0; sample < m_samples_per_control + 1; ++sample) {
             kontroller.step();
         }
-        double expected_budget = m_power_budget - 6.0 - 12.0 * step;
-        EXPECT_EQ(expected_budget, m_platform_io.get_last_adjusted_value(m_power_control_idx));
+        //double expected_budget = m_power_budget - dram_power - parent_policy_offset;
+        //EXPECT_EQ(expected_budget, m_platform_io.get_last_adjusted_value(m_power_control_idx));
     }
 
     EXPECT_NE(0, m_tree_comm->num_send());
@@ -467,7 +464,7 @@ TEST_F(KontrollerBalancerTest, two_level_controller_0)
             epoch_runtime.push_back(50.0 + 10*step + sample);
             epoch_count.push_back(step);
             power_package.push_back(300.0 + 10*step + sample);
-            power_dram.push_back(12.0 * step);
+            power_dram.push_back(1.20 * step);
         }
     }
     m_platform_io.add_varying_signal({"EPOCH_RUNTIME", IPlatformTopo::M_DOMAIN_BOARD, 0},
@@ -479,14 +476,14 @@ TEST_F(KontrollerBalancerTest, two_level_controller_0)
     m_platform_io.add_varying_signal({"POWER_DRAM", IPlatformTopo::M_DOMAIN_BOARD, 0},
                                      power_dram);
 
-    for (int level = 0; level < num_level_ctl + 1; ++level) {
+    for (int level = 0; level < num_level_ctl; ++level) {
         auto tmp = new PowerBalancerAgent(m_platform_io, m_platform_topo);
         tmp->init(level, fan_out, true);
         m_level_agent.push_back(tmp);
 
         m_agents.emplace_back(m_level_agent[level]);
     }
-    ASSERT_EQ(3u, m_level_agent.size());
+    ASSERT_EQ(2u, m_level_agent.size());
 
     Kontroller kontroller(m_comm, m_platform_io,
                           m_agent_name, m_num_send_down, m_num_send_up,
@@ -499,14 +496,16 @@ TEST_F(KontrollerBalancerTest, two_level_controller_0)
     kontroller.setup_trace();
 
     for (int step = 0; step < m_num_step; ++step) {
-        // mock other child
+        // mock other children
         std::vector<double> sample = {78.0 + step, 67.0 + step, true};
         m_tree_comm->send_up_mock_child(0, 1, sample);
+        sample = {77.0 + step, 66.0 + step, true};
+        m_tree_comm->send_up_mock_child(1, 1, sample);
 
         for (int sample = 0; sample < m_samples_per_control + 1; ++sample) {
             kontroller.step();
         }
-        double expected_budget = m_power_budget - 6.0 - 12.0 * step;
+        double expected_budget = m_power_budget - 1.20 * step;
         EXPECT_EQ(expected_budget, m_platform_io.get_last_adjusted_value(m_power_control_idx));
     }
 
