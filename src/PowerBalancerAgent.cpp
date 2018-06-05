@@ -43,6 +43,7 @@
 #include "Helper.hpp"
 #include "config.h"
 
+#include <iostream>
 namespace geopm
 {
     PowerBalancerAgent::PowerBalancerAgent()
@@ -90,6 +91,7 @@ namespace geopm
 
     void PowerBalancerAgent::init(int level, const std::vector<int> &fan_in, bool is_root)
     {
+        std::cout << level << " " << __func__ << std::endl;
         m_level = level;
         if (m_level == 0) {
             init_platform_io(); // Only do this at the leaf level.
@@ -134,13 +136,11 @@ namespace geopm
             }
             m_control_idx.push_back(control_idx);
         }
-
     }
-
-
 
     bool PowerBalancerAgent::descend_initial_budget(double power_budget_in, std::vector<double> &power_budget_out)
     {
+        std::cout << m_level << " " << __func__ << std::endl;
         bool result = false;
         if (!std::isnan(power_budget_in)) {
             // First time down the tree, send the same budget to all children.
@@ -154,6 +154,7 @@ namespace geopm
 
     bool PowerBalancerAgent::descend_updated_budget(double power_budget_in, std::vector<double> &power_budget_out)
     {
+        std::cout << m_level << " " << __func__ << std::endl;
         double factor = power_budget_in / IPlatformIO::agg_average(m_last_budget0);
         for (auto &it : power_budget_out) {
             it *= factor;
@@ -167,6 +168,7 @@ namespace geopm
 
     bool PowerBalancerAgent::descend_updated_runtimes(double power_budget_in, std::vector<double> &power_budget_out)
     {
+        std::cout << m_level << " " << __func__ << std::endl;
         bool result = false;
         if (m_is_sample_stable) {
             // All children have reported convergence in ascend().
@@ -259,6 +261,7 @@ namespace geopm
 
     bool PowerBalancerAgent::ascend(const std::vector<std::vector<double> > &in_sample, std::vector<double> &out_sample)
     {
+        std::cout << m_level << " " << __func__ << std::endl;
 #ifdef GEOPM_DEBUG
         if (out_sample.size() != M_NUM_SAMPLE) {
             throw Exception("PowerBalancerAgent::" + std::string(__func__) + "(): out_sample vector not correctly sized.",
@@ -284,6 +287,8 @@ namespace geopm
             std::vector<double> child_sample(m_num_children);
             for (size_t sig_idx = 0; sig_idx < out_sample.size(); ++sig_idx) {
                 for (int child_idx = 0; child_idx < m_num_children; ++child_idx) {
+                    std::cout << "child_sample " << child_idx << " " << sig_idx
+                              << " " << in_sample[child_idx][sig_idx] << std::endl;
                     child_sample[child_idx] = in_sample[child_idx][sig_idx];
                 }
                 out_sample[sig_idx] = m_agg_func[sig_idx](child_sample);
@@ -311,12 +316,16 @@ namespace geopm
         if (do_update) {
             m_last_runtime1 = m_last_runtime0;
             m_last_runtime0 = this_runtime;
+
+            // drg: right place for this?
+            m_epoch_runtime_buf->insert(m_agg_func[M_SAMPLE_EPOCH_RUNTIME](this_runtime));
         }
         return result;
     }
 
     bool PowerBalancerAgent::adjust_platform(const std::vector<double> &in_policy)
     {
+        //std::cout << m_level << " " << __func__ << std::endl;
 #ifdef GEOPM_DEBUG
         if (in_policy.size() != M_NUM_POLICY) {
             throw Exception("PowerBalancerAgent::" + std::string(__func__) + "(): one control was expected.",
@@ -355,6 +364,7 @@ namespace geopm
 
     bool PowerBalancerAgent::sample_platform(std::vector<double> &out_sample)
     {
+        std::cout << m_level << " " << __func__ << " ";
 #ifdef GEOPM_DEBUG
         if (out_sample.size() != M_NUM_SAMPLE) {
             throw Exception("PowerBalancerAgent::" + std::string(__func__)  + "(): out_sample vector not correctly sized.",
@@ -365,7 +375,9 @@ namespace geopm
         // Populate sample vector by reading from PlatformIO
         for (int sample_idx = 0; sample_idx < M_PLAT_NUM_SIGNAL; ++sample_idx) {
             m_sample[sample_idx] = m_platform_io.sample(m_pio_idx[sample_idx]);
+            std::cout << m_sample[sample_idx] << " ";
         }
+        std::cout << std::endl;
 
         // If all of the ranks have observed a new epoch then update
         // the circular buffers that hold the history.
@@ -407,6 +419,7 @@ namespace geopm
 
     std::vector<double> PowerBalancerAgent::split_budget_first(double power_budget_in)
     {
+        std::cout << m_level << " " << __func__ << std::endl;
         std::vector<double> budget(m_num_children);
         // We have only one sample, so move our budget a small amount
         // to measure measure slope of runtime vs. power.
@@ -436,6 +449,7 @@ namespace geopm
                                                                 double min_power_budget,
                                                                 double max_power_budget)
     {
+        std::cout << m_level << " " << __func__ << std::endl;
         // Fit a line to runtime as a function of budget for each
         // child.  Find the budget value for each child such that the
         // projected runtime is uniform given the linear model.
@@ -484,22 +498,28 @@ namespace geopm
 
     std::vector<double> PowerBalancerAgent::split_budget(double avg_power_budget)
     {
+        std::cout << m_level << " " << __func__ << std::endl;
         if (avg_power_budget < m_min_power_budget) {
-            throw Exception("PowerBalancerAgent::split_budget(): ave_power_budget less than min_power_budget.",
+            throw Exception("PowerBalancerAgent::split_budget(): avg_power_budget less than min_power_budget.",
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
 
         std::vector<double> result(m_num_children);
         if (std::any_of(m_last_budget1.begin(), m_last_budget1.end(), [](double val) {return std::isnan(val);})) {
+            std::cout << "SPLIT: first" << std::endl;
             result = split_budget_first(avg_power_budget);
         }
         else if (avg_power_budget == m_min_power_budget) {
+            std::cout << "SPLIT: min" << std::endl;
             std::fill(result.begin(), result.end(), m_min_power_budget);
         }
+        // TODO: this buffer is only updated by sample platform
         else if (m_epoch_runtime_buf->size() < m_min_num_converged) {
+            std::cout << "SPLIT: last (buf size=" << m_epoch_runtime_buf->size() << ")" << std::endl;
             result = m_last_budget0;
         }
         else {
+            std::cout << "SPLIT: sort" << std::endl;
             std::vector<std::pair<double, int> > indexed_sorted_last_runtime(m_num_children);
             for (int idx = 0; idx != m_num_children; ++idx) {
                 indexed_sorted_last_runtime[idx] = std::make_pair(m_last_runtime0[idx], idx);

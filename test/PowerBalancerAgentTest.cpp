@@ -231,7 +231,7 @@ TEST_F(PowerBalancerAgentTest, ascend_descend)
     check_result(expected_sample, out_sample);
 
     for (int aa = 1; aa <= m_min_num_converged; ++aa) {
-        m_agent->ascend({ { 1,2,true}, {4,5,true} }, out_sample);
+        m_agent->ascend({ { (double)aa,2,true}, {4,5,true} }, out_sample);
         EXPECT_FALSE(m_agent->descend(in_budget, result));
         // expected remains the same; if returned false; output should not have changed
         for (size_t child = 0; child < result.size(); ++child) {
@@ -243,6 +243,7 @@ TEST_F(PowerBalancerAgentTest, ascend_descend)
     // TODO: only hit updated runtimes branch every m_ascend_period calls to ascend
     // only hit out of range branch in decend_updated_runtimes after m_min_num_converged calls to descend_updated_runtimes
     // not sure why condition is m_ascend_count == 1
+    // TODO: need to call sample_platform also; but this is supposed to be non-leaf node
 
     m_agent->ascend({ { 1,2,true}, {4,5,true} }, out_sample);
     check_result(expected_sample, out_sample);
@@ -254,6 +255,36 @@ TEST_F(PowerBalancerAgentTest, ascend_descend)
     for (size_t child = 0; child < result.size(); ++child) {
         check_result(expected[child], result[child]);
     }
+
+
+    for (int aa = 1; aa <= m_min_num_converged +1; ++aa) {
+        std::cout << aa << std::endl;
+        m_agent->ascend({ { 6,7,true}, {8,9,true} }, out_sample);
+        EXPECT_FALSE(m_agent->descend(in_budget, result));
+        // expected remains the same; if returned false; output should not have changed
+        for (size_t child = 0; child < result.size(); ++child) {
+            check_result(expected[child], result[child]);
+        }
+        //check_result(expected_sample, out_sample);
+    }
+
+
+    expected = { {189}, {211} };
+    ASSERT_EQ(expected.size(), m_fan_in[level]);
+    EXPECT_TRUE(m_agent->descend(in_budget, result));
+
+    for (size_t child = 0; child < result.size(); ++child) {
+        check_result(expected[child], result[child]);
+    }
+
+    /*
+    expected_sample = {8, 8, true};
+
+    expected = { {189}, {211} };
+    for (size_t child = 0; child < result.size(); ++child) {
+        check_result(expected[child], result[child]);
+    }
+    */
 
     //expected_sample = {3, 3.5, true};
     //EXPECT_TRUE(m_agent->ascend({ { 2,3,true}, {3,4,true} }, out_sample));
