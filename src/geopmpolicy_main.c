@@ -42,6 +42,11 @@
 #include <sys/types.h>
 
 #include "geopm_policy.h"
+#include <limits.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include "geopm_platform_io.h"
+#include "geopm_platform_topo.h"
 #include "geopm_version.h"
 #include "geopm_error.h"
 #include "config.h"
@@ -64,6 +69,160 @@ enum geopmpolicy_const {
 
 static int _geopm_policy_mode_parse(struct geopm_policy_c *policy, const char *mode_str);
 static int _geopm_policy_dict_parse(struct geopm_policy_c *policy, const char *options);
+
+///@todo free memory
+///@todo need equiv in gepm_platform_topo.h
+#define M_NUM_DOMAIN 11///src/PlatformTopo.hpp
+int test_platform_topo()
+{
+    int domain_type, domain_type2;
+    int num_domain = 0;
+    int domain_idx, domain_idx2;
+    int num_cpu = 0;
+    int cur_cpu_idx;
+    int *cpu_idx = NULL;
+    bool is_within;
+    const int str_len = 512;//NAME_MAX;
+    char domain_name[str_len];
+    int ret = 0;
+    for (int inner_domain = 1; inner_domain < M_NUM_DOMAIN; ++inner_domain) {
+        for (int outer_domain = M_NUM_DOMAIN - 1; outer_domain >= 0; --outer_domain) {
+            ret = geopm_platform_topo_is_domain_within(inner_domain, outer_domain, &is_within);
+            ///@todo assert proper is_within val
+        }
+    }
+    for (domain_type = 0; domain_type < M_NUM_DOMAIN; ++domain_type) {
+        ret = geopm_platform_topo_num_domain(domain_type, &num_domain);
+        if (domain_type == 0) {
+            /// assert ret != 0
+            continue;
+        }
+        for (domain_idx = 0; domain_idx < num_domain; ++domain_idx) {
+            if (!ret) {
+                ret = geopm_platform_topo_domain_cpus(domain_type, domain_idx, &num_cpu, &cpu_idx);
+            }
+            for (cur_cpu_idx = 0; cur_cpu_idx < num_cpu; ++cur_cpu_idx) {
+                if (!ret) {
+                    ret = geopm_platform_topo_domain_idx(domain_type, *(cpu_idx + cur_cpu_idx), &domain_idx2);
+                    /// assert domain_idx == domain_idx2
+                }
+            }
+        }
+        if (!ret) {
+            ///@todo return str_len?
+            ret = geopm_platform_topo_domain_type_to_name(domain_type, str_len, domain_name);
+        }
+        if (!ret) {
+            ret = geopm_platform_topo_domain_name_to_type(strlen(domain_name), domain_name, &domain_type2);
+            /// assert domain_type == domain_type2
+        }
+#if 0
+    if (!ret) {
+        ret = geopm_platform_topo_define_cpu_group(int num_cpu, const int *cpu_domain_idx, int *cpu_group_idx);
+    }
+#endif
+    }
+    return ret;
+}
+
+int test_platform_io_controls()
+{
+    int ret = 0;
+    int domain_type;
+    int num_domain;
+    int dom_idx;
+    int push_idx;
+    int num_controls;
+    int num_pushed_controls;
+    int *control_lens = NULL;
+    char **control_names = NULL;
+    int ctl_idx;
+    ret = geopm_platform_io_save_control();
+    ret = geopm_platform_io_control_names(&num_controls, &control_lens, &control_names);
+    if (!ret)
+        for (ctl_idx = 0; ctl_idx < num_controls; ++ctl_idx) {
+            printf("%s\n", control_names[ctl_idx]);
+            ret = geopm_platform_io_control_domain_type(control_lens[ctl_idx], control_names[ctl_idx], &domain_type);
+            if (!ret) {
+                ret = geopm_platform_topo_num_domain(domain_type, &num_domain);
+                /// @todo?
+            }
+            if (!ret) {
+                for (dom_idx = 0; dom_idx < num_domain; ++dom_idx) {
+                    if (!ret) {
+                        ret = geopm_platform_io_push_control(control_lens[ctl_idx], control_names[ctl_idx], domain_type, dom_idx, &push_idx);
+                    }
+                    if (!ret) {
+                        ///@todo write good value?  thinking figuring out a valid value per ctl is integration-y as controls in general are not
+                        ///      assured unless on a valid platform
+                        //ret = geopm_platform_io_write_control(control_lens[ctl_idx], control_names[ctl_idx], domain_type, dom_idx, 0.0);
+                    }
+                    if (!ret) {
+                        ///@todo write good value?  thinking figuring out a valid value per ctl is integration-y as controls in general are not
+                        ///      assured unless on a valid platform
+                        //ret = geopm_platform_io_adjust(push_idx, 0.0);
+                    }
+                }
+            }
+        }
+    ret = geopm_platform_io_num_pushed_control(&num_pushed_controls);
+    //ret = geopm_platform_io_write_batch();
+
+    geopm_platform_io_restore_control();
+    return ret;
+}
+
+int test_platform_io_signals()
+{
+    int ret = 0;
+    int domain_type;
+    int num_domain;
+    int dom_idx;
+    int num_signals;
+    int num_pushed_signals;
+    int push_idx;
+    /// @todo determine whether or not this feature is targeted for C interfaces
+    //const int num_sub_signal = 2;
+    //const char *comb_sig_name = "SIGNAL1 + SIGNAL2";
+    //const int comb_sig_name_len = strlen(comb_sig_name);
+    //int sub_sig_idx[num_sub_signal];
+    //int comb_sig_idx;
+    int *signal_lens = NULL;
+    char **signal_names = NULL;
+    int sig_idx;
+    ret = geopm_platform_io_signal_names(&num_signals, &signal_lens, &signal_names);
+    if (!ret) {
+        for (sig_idx = 0; sig_idx < num_signals; ++sig_idx) {
+            printf("%s\n", signal_names[sig_idx]);
+            ret = geopm_platform_io_signal_domain_type(signal_lens[sig_idx], signal_names[sig_idx], &domain_type);
+            if (!ret) {
+                ret = geopm_platform_topo_num_domain(domain_type, &num_domain);
+            }
+            for (dom_idx = 0; dom_idx < num_domain; ++dom_idx) {
+                if (!ret) {
+                    ret = geopm_platform_io_push_signal(signal_lens[sig_idx], signal_names[sig_idx], domain_type, dom_idx, &push_idx);
+                }
+            }
+            //if (domain_type == 1 && num_signals >= 2 && sig_idx == 0) {
+                //sub_sig_idx[sig_idx] = push_idx;
+            //}
+            //else if (domain_type == 1 && num_signals >= 2 && sig_idx == 1) {
+                //sub_sig_idx[sig_idx] = push_idx;
+            //}
+        }
+    }
+    //if (num_signals >= 2) {
+        //ret = geopm_platform_io_push_combined_signal(comb_sig_name_len, comb_sig_name, domain_type, 0,
+                //num_sub_signal, sub_sig_idx, &comb_sig_idx);
+    //}
+    ret = geopm_platform_io_num_pushed_signal(&num_pushed_signals);
+#if 0
+int geopm_platform_io_sample(int signal_idx, double *value);
+int geopm_platform_io_read_batch(void);
+int geopm_platform_io_read_signal(int signal_str_len, const char *signal_name, int domain_type, int domain_idx, double *value);
+#endif
+    return ret;
+}
 
 int main(int argc, char** argv)
 {
@@ -139,6 +298,15 @@ int main(int argc, char** argv)
                         "\n"
                         "     Copyright (c) 2015, 2016, 2017, 2018, Intel Corporation. All rights reserved.\n"
                         "\n";
+
+    err = test_platform_topo();
+    if (!err) {
+        err = test_platform_io_controls();
+    }
+    //if (!err) {
+        err = test_platform_io_signals();
+    //}
+    return err;
 
     if (argc < 2) {
         fprintf(stderr, "Error: No arguments specified\n");
