@@ -96,13 +96,17 @@ namespace geopm
             static std::vector<std::string> policy_names(void);
             static std::vector<std::string> sample_names(void);
 
+            // public for testing
+            std::vector<double> split_budget(double avg_power_budget);
+            void inject_runtimes(std::vector<double> runtime0, std::vector<double> runtime1);
+            void inject_budgets(std::vector<double> budget0, std::vector<double> budget1);
         private:
             // todo: see if these can be tested without making public
             void init_platform_io(void);
             bool descend_initial_budget(double power_budget_in, std::vector<double> &power_budget_out);
             bool descend_updated_budget(double power_budget_in, std::vector<double> &power_budget_out);
             bool descend_updated_runtimes(double power_budget_in, std::vector<double> &power_budget_out);
-            std::vector<double> split_budget(double avg_power_budget);
+
             std::vector<double> split_budget_first(double power_budget_in);
             std::vector<double> split_budget_helper(double avg_power_budget,
                                                     double min_power_budget,

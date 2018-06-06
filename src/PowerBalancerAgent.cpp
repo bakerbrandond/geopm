@@ -448,6 +448,14 @@ namespace geopm
         return budget;
     }
 
+    void print_vector(std::string label, std::vector<double> vec) {
+        std::cout << label;
+        for (auto x : vec) {
+            std::cout << x << " ";
+        }
+        std::cout << std::endl;
+    }
+
     std::vector<double> PowerBalancerAgent::split_budget_helper(double avg_power_budget,
                                                                 double min_power_budget,
                                                                 double max_power_budget)
@@ -467,8 +475,16 @@ namespace geopm
         // result[i] = (time - b[i]) / m[i]
         // avg_power_budget * m_num_children = sum((time - b[i]) / m[i])
         //                                 = time * sum(1/m[i]) - sum(b[i] / m[i])
+        // Q: is time scalar or a vector? assuming this is the target runtime
+        // also confused about runtime0 vs runtime1 and budget0 vs budget1.  differences above could be
+        // positive or negative
         // time = avg_power_budget * m_num_children / (sum(1/m[i]) - sum(b[i] / m[i]))
         // result[i] = ((avg_power_budget * m_num_children / (sum(1/m[i]) - sum(b[i] / m[i]))) - b[i]) / m[i]
+
+        if (avg_power_budget < min_power_budget || avg_power_budget < 0 ||
+            min_power_budget > max_power_budget || min_power_budget < 0) {
+            throw Exception("bad inputs", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+        }
 
         std::vector<double> result(m_num_children);
         std::vector<double> mm(m_num_children);
@@ -476,26 +492,59 @@ namespace geopm
         double inv_m_sum = 0.0;
         double ratio_sum = 0.0;
         for (int child_idx = 0; child_idx != m_num_children; ++child_idx) {
+            if (m_last_budget1[child_idx] == m_last_budget0[child_idx]) {
+                std::cerr << "warning: budgets are equal" << std::endl;
+            }
+            if (m_last_runtime1[child_idx] == m_last_runtime0[child_idx]) {
+                std::cerr << "warning: runtimes are equal" << std::endl;
+            }
             mm[child_idx] = (m_last_runtime1[child_idx] - m_last_runtime0[child_idx]) /
                             (m_last_budget1[child_idx] - m_last_budget0[child_idx]);
+            //// todo drg added - slope should be negative but we dont want target time to be
+            mm[child_idx] *= -1.0;
+            ////
             bb[child_idx] = m_last_budget0[child_idx] - m_last_runtime0[child_idx] / mm[child_idx];
             inv_m_sum += 1.0 / mm[child_idx];
             ratio_sum += bb[child_idx] / mm[child_idx];
         }
+
+        print_vector("mm: ", mm);
+        print_vector("bb: ", bb);
+        std::cout << "inv_m_sum " << inv_m_sum << std::endl;
+        std::cout << "ratio_sum " << ratio_sum << std::endl;
+
+        std::cout << "min: " << min_power_budget << " max: " << max_power_budget
+                  << " avg: " << avg_power_budget << std::endl;
+        std::cout << "target time: " << (avg_power_budget * m_num_children) / inv_m_sum << std::endl;
+
+        double remaining_power = avg_power_budget * m_num_children;
         for (int child_idx = 0; child_idx != m_num_children; ++child_idx) {
             result[child_idx] = ((avg_power_budget * m_num_children /
                            (inv_m_sum - ratio_sum)) - bb[child_idx]) / mm[child_idx];
+            std::cout << "child " << child_idx << " initial=" << result[child_idx] << std::endl;
             if (result[child_idx] < min_power_budget) {
                 result[child_idx] = min_power_budget;
             }
             else if (result[child_idx] > max_power_budget) {
                 result[child_idx] = max_power_budget;
             }
-            double pool = avg_power_budget * (m_num_children - child_idx) - result[child_idx];
+            // todo: if not enough power in budget, this should be max remaining minus enough for all the other children to get min
+            double min_remaining = (m_num_children - child_idx - 1) * min_power_budget;
+            if (result[child_idx] > (remaining_power - min_remaining)) {
+                result[child_idx] = remaining_power - min_remaining;
+            }
+            remaining_power -= result[child_idx];
+            std::cout << "child " << child_idx << " gets " << result[child_idx] << std::endl;
+            std::cout << "remaining: " << remaining_power << std::endl;
+
+            //double pool = avg_power_budget * (m_num_children - child_idx) - result[child_idx];
+            //std::cout << "pool: " << pool << std::endl;
             if (child_idx != m_num_children - 1) {
-                avg_power_budget = pool / (m_num_children - child_idx - 1);
+                avg_power_budget = remaining_power / (m_num_children - child_idx - 1);
+                std::cout << "avg updated: " << avg_power_budget << std::endl;
             }
         }
+        print_vector("result: ", result);
         return result;
     }
 
@@ -531,6 +580,7 @@ namespace geopm
             }
             std::sort(indexed_sorted_last_runtime.begin(), indexed_sorted_last_runtime.end());
             // note last_runtime[sort_idx] == indexed_sorted_last_runtime[child_idx].first
+            // TODO drg confused about where these are used
             std::vector<double> sorted_last_budget0(m_num_children);
             std::vector<double> sorted_last_budget1(m_num_children);
             std::vector<double> sorted_last_runtime0(m_num_children);
@@ -550,12 +600,24 @@ namespace geopm
                 result[child_idx] = sorted_result[sort_idx];
             }
         }
-        std::cout << "budget: ";
-        for (auto res : result) {
-            std::cout << res << " ";
-        }
-        std::cout << std::endl;
+        print_vector("budget: ", result);
         return result;
+    }
+
+    void PowerBalancerAgent::inject_runtimes(std::vector<double> runtime0, std::vector<double> runtime1)
+    {
+        m_last_runtime0 = runtime0;
+        m_last_runtime1 = runtime1;
+        // TODO: see end of ascend(); this is wrong
+        //m_last_runtime1 = m_last_runtime0;
+        //m_last_runtime0 = runtimes;
+        m_epoch_runtime_buf->insert(m_agg_func[M_SAMPLE_EPOCH_RUNTIME](runtime0));
+    }
+
+    void PowerBalancerAgent::inject_budgets(std::vector<double> budget0, std::vector<double> budget1)
+    {
+        m_last_budget0 = budget0;
+        m_last_budget1 = budget1;
     }
 
     std::vector<std::pair<std::string, std::string> > PowerBalancerAgent::report_header(void) const

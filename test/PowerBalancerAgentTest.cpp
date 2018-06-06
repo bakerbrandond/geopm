@@ -80,14 +80,18 @@ class PowerBalancerAgentTest : public ::testing::Test
         int m_num_sample = 0;
         int m_min_num_converged = 15;  // this is hard coded in the agent; determines how many times we need to sample
         int m_ascend_period = 10;      // also hardcoded; determines how many times we need to ascend
+        double m_min_power = 50;
+        double m_max_power = 300;
 };
 
 void PowerBalancerAgentTest::SetUp()
 {
     m_fan_in = {2, 2};
 
-    EXPECT_CALL(m_platform_io, read_signal("POWER_PACKAGE_MIN", IPlatformTopo::M_DOMAIN_PACKAGE, 0));
-    EXPECT_CALL(m_platform_io, read_signal("POWER_PACKAGE_MAX", IPlatformTopo::M_DOMAIN_PACKAGE, 0));
+    EXPECT_CALL(m_platform_io, read_signal("POWER_PACKAGE_MIN", IPlatformTopo::M_DOMAIN_PACKAGE, 0))
+        .WillOnce(Return(m_min_power));
+    EXPECT_CALL(m_platform_io, read_signal("POWER_PACKAGE_MAX", IPlatformTopo::M_DOMAIN_PACKAGE, 0))
+        .WillOnce(Return(m_max_power));
     m_agent = geopm::make_unique<PowerBalancerAgent>(m_platform_io, m_platform_topo);
     m_num_policy = PowerBalancerAgent::policy_names().size();
     m_num_sample = PowerBalancerAgent::sample_names().size();
@@ -325,4 +329,36 @@ TEST_F(PowerBalancerAgentTest, node_0_level_1_setup)
     EXPECT_CALL(m_platform_io, push_control(_, _, _)).Times(0);
 
     m_agent->init(1, m_fan_in, true);
+}
+
+TEST_F(PowerBalancerAgentTest, split_budget) {
+    // tree should not use platform io
+    EXPECT_CALL(m_platform_io, push_signal(_, _, _)).Times(0);
+    EXPECT_CALL(m_platform_io, push_control(_, _, _)).Times(0);
+
+    m_agent->init(1, m_fan_in, true);
+
+    // initial split
+    std::vector<double> expected {200, 200};
+    std::vector<double> result;
+    result = m_agent->split_budget(200);
+    EXPECT_EQ(expected, result);
+
+    // first
+    m_agent->inject_runtimes({20, 15}, {NAN, NAN});
+    m_agent->inject_budgets({200, 200}, {NAN, NAN});
+    expected = {210, 190};
+    result = m_agent->split_budget(200);
+    EXPECT_EQ(expected, result);
+
+    // last
+    for (int i = 0; i < 15; ++i) {
+        m_agent->inject_runtimes({20, 15}, {19, 16});
+    }
+    m_agent->inject_runtimes({19, 16}, {18, 17});
+    m_agent->inject_budgets({200, 200}, {250, 150});
+    expected = {185, 215}; // ?
+    result = m_agent->split_budget(200);
+    EXPECT_EQ(expected, result);
+
 }
