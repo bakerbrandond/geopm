@@ -428,12 +428,13 @@ namespace geopm
         // to measure measure slope of runtime vs. power.
         double median_runtime = IPlatformIO::agg_median(m_last_runtime0);
         double total_target = 0.0;
+        double initial_slosh = (m_max_power_budget - m_min_power_budget) / 3.0;
         for (int child_idx = 0; child_idx != m_num_children; ++child_idx) {
             if (m_last_runtime0[child_idx] < median_runtime) {
-                budget[child_idx] = m_last_budget0[child_idx] - 10;
+                budget[child_idx] = m_last_budget0[child_idx] - initial_slosh;
             }
             else if (m_last_runtime0[child_idx] >= median_runtime) {
-                 budget[child_idx] = m_last_budget0[child_idx] + 10;
+                budget[child_idx] = m_last_budget0[child_idx] + initial_slosh;
             }
             total_target += budget[child_idx];
         }
@@ -501,7 +502,9 @@ namespace geopm
             mm[child_idx] = (m_last_runtime1[child_idx] - m_last_runtime0[child_idx]) /
                             (m_last_budget1[child_idx] - m_last_budget0[child_idx]);
             //// todo drg added - slope should be negative but we dont want target time to be
+            //// also added magic slope modifier from decider
             mm[child_idx] *= -1.0;
+            mm[child_idx] *= 3.0 * 10;
             ////
             bb[child_idx] = m_last_budget0[child_idx] - m_last_runtime0[child_idx] / mm[child_idx];
             inv_m_sum += 1.0 / mm[child_idx];
@@ -543,6 +546,59 @@ namespace geopm
                 avg_power_budget = remaining_power / (m_num_children - child_idx - 1);
                 std::cout << "avg updated: " << avg_power_budget << std::endl;
             }
+        }
+        print_vector("result: ", result);
+        return result;
+    }
+
+    std::vector<double> PowerBalancerAgent::split_budget_helper2(double avg_power_budget,
+                                                                 double min_power_budget,
+                                                                 double max_power_budget,
+                                                                 double target_runtime)
+    {
+        if (avg_power_budget < min_power_budget || avg_power_budget < 0 ||
+            min_power_budget > max_power_budget || min_power_budget < 0) {
+            throw Exception("bad inputs", GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+        }
+        std::cout << "min: " << min_power_budget << " max: " << max_power_budget
+                  << " avg: " << avg_power_budget << " target runtime: " << target_runtime << std::endl;
+
+        double swing_decrease_factor = 0.80; // magic
+        std::vector<double> result(m_num_children);
+        double remaining_power = avg_power_budget * m_num_children;
+        for (int child_idx = 0; child_idx != m_num_children; ++child_idx) {
+            // todo: might want to skip this child if runtime is very close to target
+            if (m_last_budget1[child_idx] == m_last_budget0[child_idx]) {
+                std::cerr << "warning: budgets are equal" << std::endl;
+            }
+            if (m_last_runtime1[child_idx] == m_last_runtime0[child_idx]) {
+                std::cerr << "warning: runtimes are equal" << std::endl;
+            }
+
+            double last_diff = std::abs(m_last_budget1[child_idx] - m_last_budget0[child_idx]);
+
+            std::cout << "last diff " << last_diff << std::endl;
+            if (m_last_runtime0[child_idx] < target_runtime) {
+                result[child_idx] = m_last_budget0[child_idx] - last_diff * swing_decrease_factor;
+            } else if (m_last_runtime0[child_idx] > target_runtime) {
+                result[child_idx] = m_last_budget0[child_idx] + last_diff * swing_decrease_factor;
+            }
+
+            std::cout << "child " << child_idx << " initial=" << result[child_idx] << std::endl;
+            if (result[child_idx] < min_power_budget) {
+                result[child_idx] = min_power_budget;
+            }
+            else if (result[child_idx] > max_power_budget) {
+                result[child_idx] = max_power_budget;
+            }
+            // todo: if not enough power in budget, this should be max remaining minus enough for all the other children to get min
+            double min_remaining = (m_num_children - child_idx - 1) * min_power_budget;
+            if (result[child_idx] > (remaining_power - min_remaining)) {
+                result[child_idx] = remaining_power - min_remaining;
+            }
+            remaining_power -= result[child_idx];
+            std::cout << "child " << child_idx << " gets " << result[child_idx] << std::endl;
+            std::cout << "remaining: " << remaining_power << std::endl;
         }
         print_vector("result: ", result);
         return result;
@@ -592,13 +648,21 @@ namespace geopm
                 sorted_last_runtime0[child_idx] = m_last_runtime0[sort_idx];
                 sorted_last_runtime1[child_idx] = m_last_runtime1[sort_idx];
             }
-            std::vector<double> sorted_result = split_budget_helper(avg_power_budget,
+            // std::vector<double> sorted_result = split_budget_helper(avg_power_budget,
+            //                                                        m_min_power_budget,
+            //                                                        m_max_power_budget);
+            double target_runtime = IPlatformIO::agg_average(m_last_runtime0);
+            result = split_budget_helper2(avg_power_budget,
                                                                     m_min_power_budget,
-                                                                    m_max_power_budget);
+                                                                    m_max_power_budget,
+                                                                    target_runtime);
+
+            /*
             for (int child_idx = 0; child_idx != m_num_children; ++child_idx) {
                 int sort_idx = indexed_sorted_last_runtime[child_idx].second;
                 result[child_idx] = sorted_result[sort_idx];
             }
+            */
         }
         print_vector("budget: ", result);
         return result;

@@ -336,29 +336,37 @@ TEST_F(PowerBalancerAgentTest, split_budget) {
     EXPECT_CALL(m_platform_io, push_signal(_, _, _)).Times(0);
     EXPECT_CALL(m_platform_io, push_control(_, _, _)).Times(0);
 
+    m_fan_in = {3, 3};
     m_agent->init(1, m_fan_in, true);
 
     // initial split
-    std::vector<double> expected {200, 200};
+    std::vector<double> expected {200, 200, 200};
     std::vector<double> result;
     result = m_agent->split_budget(200);
     EXPECT_EQ(expected, result);
 
     // first
-    m_agent->inject_runtimes({20, 15}, {NAN, NAN});
-    m_agent->inject_budgets({200, 200}, {NAN, NAN});
-    expected = {210, 190};
+    m_agent->inject_runtimes({20, 15, 30}, {NAN, NAN, NAN});
+    m_agent->inject_budgets({200, 200, 200}, {NAN, NAN, NAN});
+    expected = {210, 190, 210};
     result = m_agent->split_budget(200);
     EXPECT_EQ(expected, result);
 
     // last
     for (int i = 0; i < 15; ++i) {
-        m_agent->inject_runtimes({20, 15}, {19, 16});
+        m_agent->inject_runtimes({25, 15, 30}, {24, 16, 28});
     }
-    m_agent->inject_runtimes({19, 16}, {18, 17});
-    m_agent->inject_budgets({200, 200}, {250, 150});
-    expected = {185, 215}; // ?
+    m_agent->inject_runtimes({24, 16, 28}, {23, 17, 26});
+    m_agent->inject_budgets({200, 200, 200}, {225, 150, 225});
+    expected = {185, 215, 160}; // ?
     result = m_agent->split_budget(200);
     EXPECT_EQ(expected, result);
+
+    m_agent->inject_runtimes({23, 17, 26}, {22, 18, 24});
+    m_agent->inject_budgets({225, 150, 225}, { 220, 160, 220});
+    expected = {185, 215, 160}; // ?
+    result = m_agent->split_budget(200);
+    EXPECT_EQ(expected, result);
+
 
 }

@@ -98,6 +98,7 @@ namespace geopm
 
             // public for testing
             std::vector<double> split_budget(double avg_power_budget);
+
             void inject_runtimes(std::vector<double> runtime0, std::vector<double> runtime1);
             void inject_budgets(std::vector<double> budget0, std::vector<double> budget1);
         private:
@@ -111,6 +112,10 @@ namespace geopm
             std::vector<double> split_budget_helper(double avg_power_budget,
                                                     double min_power_budget,
                                                     double max_power_budget);
+            std::vector<double> split_budget_helper2(double avg_power_budget,
+                                                     double min_power_budget,
+                                                     double max_power_budget,
+                                                     double target_runtime);
         private:
 
             IPlatformIO &m_platform_io;
