@@ -30,41 +30,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GEOPM_ENV_H_INCLUDE
-#define GEOPM_ENV_H_INCLUDE
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+#ifndef REPLAYPLATFORMIO_HPP_INCLUDE
+#define REPLAYPLATFORMIO_HPP_INCLUDE
 
-enum geopm_pmpi_ctl_e {
-    GEOPM_PMPI_CTL_NONE,
-    GEOPM_PMPI_CTL_PROCESS,
-    GEOPM_PMPI_CTL_PTHREAD,
+#include <fstream>
+#include <memory>
+#include <map>
+
+#include "PlatformIO.hpp"
+#include "IOGroup.hpp"
+#include "MockPlatformIO.hpp"
+
+class ReplayPlatformIO : public geopm::IPlatformIO
+{
+    public:
+        ReplayPlatformIO(const std::string &record_path);
+        IPlatformIO &platform_io(void);
+    private:
+        std::map<std::string, std::function<void(const std::string &input_str,
+                                                 const std::string &output_str)> > m_func_map;
+        std::unique_ptr<MockPlatformIO> m_pio_mock;
+        std::ifstream m_record_file;
 };
 
-const char *geopm_env_policy(void);
-const char *geopm_env_agent(void);
-const char *geopm_env_shmkey(void);
-const char *geopm_env_platform_io_record_path(void);
-const char *geopm_env_trace(void);
-const char *geopm_env_plugin_path(void);
-const char *geopm_env_report(void);
-const char *geopm_env_comm(void);
-const char *geopm_env_profile(void);
-const char *geopm_env_trace_signal(int);
-int geopm_env_num_trace_signal(void);
-int geopm_env_report_verbosity(void);
-int geopm_env_pmpi_ctl(void);
-int geopm_env_do_platform_io_record(void);
-int geopm_env_do_region_barrier(void);
-int geopm_env_do_trace(void);
-int geopm_env_do_profile(void);
-int geopm_env_profile_timeout(void);
-int geopm_env_debug_attach(void);
-int geopm_env_do_kontroller(void);
-
-#ifdef __cplusplus
-}
-#endif
 #endif

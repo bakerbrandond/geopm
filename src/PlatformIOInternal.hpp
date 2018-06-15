@@ -38,6 +38,8 @@
 #include <vector>
 #include <map>
 #include <functional>
+#include <fstream>
+#include <sstream>
 
 #include "PlatformIO.hpp"
 #include "CombinedSignal.hpp"
@@ -59,41 +61,41 @@ namespace geopm
             PlatformIO & operator=(const PlatformIO&) = delete;
             /// @brief Virtual destructor for the PlatformIO class.
             virtual ~PlatformIO() = default;
-            void register_iogroup(std::shared_ptr<IOGroup> iogroup) override;
-            std::set<std::string> signal_names(void) const override;
-            std::set<std::string> control_names(void) const override;
-            int signal_domain_type(const std::string &signal_name) const override;
-            int control_domain_type(const std::string &control_name) const override;
-            int push_signal(const std::string &signal_name,
+            virtual void register_iogroup(std::shared_ptr<IOGroup> iogroup) override;
+            virtual std::set<std::string> signal_names(void) const override;
+            virtual std::set<std::string> control_names(void) const override;
+            virtual int signal_domain_type(const std::string &signal_name) const override;
+            virtual int control_domain_type(const std::string &control_name) const override;
+            virtual int push_signal(const std::string &signal_name,
                             int domain_type,
                             int domain_idx) override;
-            void push_region_signal_total(int signal_idx,
+            virtual void push_region_signal_total(int signal_idx,
                                           int domain_type,
                                           int domain_idx) override;
-            int push_combined_signal(const std::string &signal_name,
+            virtual int push_combined_signal(const std::string &signal_name,
                                      int domain_type,
                                      int domain_idx,
                                      const std::vector<int> &sub_signal_idx) override;
-            int push_control(const std::string &control_name,
+            virtual int push_control(const std::string &control_name,
                              int domain_type,
                              int domain_idx) override;
-            int num_signal(void) const override;
-            int num_control(void) const override;
-            double sample(int signal_idx) override;
-            double sample_region_total(int signal_idx, uint64_t region_id) override;
-            void adjust(int control_idx, double setting) override;
-            void read_batch(void) override;
-            void write_batch(void) override;
-            double read_signal(const std::string &signal_name,
+            virtual int num_signal(void) const override;
+            virtual int num_control(void) const override;
+            virtual double sample(int signal_idx) override;
+            virtual double sample_region_total(int signal_idx, uint64_t region_id) override;
+            virtual void adjust(int control_idx, double setting) override;
+            virtual void read_batch(void) override;
+            virtual void write_batch(void) override;
+            virtual double read_signal(const std::string &signal_name,
                                int domain_type,
                                int domain_idx) override;
-            void write_control(const std::string &control_name,
+            virtual void write_control(const std::string &control_name,
                                int domain_type,
                                int domain_idx,
                                double setting) override;
-            void save_control(void) override;
-            void restore_control(void) override;
-            std::function<double(const std::vector<double> &)> agg_function(std::string signal_name) const override;
+            virtual void save_control(void) override;
+            virtual void restore_control(void) override;
+            virtual std::function<double(const std::vector<double> &)> agg_function(std::string signal_name) const override;
         private:
             /// @brief Save a high-level signal as a combination of other signals.
             /// @param [in] signal_idx Index a caller can use to refer to this signal.

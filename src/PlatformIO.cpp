@@ -30,6 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <unistd.h>
 #include <cpuid.h>
 #include <iomanip>
 #include <cmath>
@@ -37,6 +38,7 @@
 #include <numeric>
 #include <iostream>
 
+#include "geopm_env.h"
 #include "geopm_sched.h"
 #include "geopm_message.h"
 #include "geopm_hash.h"
@@ -53,8 +55,66 @@
 
 namespace geopm
 {
+    class PlatformIORecorder : public PlatformIO
+    {
+        public:
+            /// @brief Constructor for the PlatformIORecorder class.
+            PlatformIORecorder();
+            PlatformIORecorder(const PlatformIORecorder &other) = delete;
+            PlatformIORecorder & operator=(const PlatformIORecorder&) = delete;
+            virtual ~PlatformIORecorder();
+            void register_iogroup(std::shared_ptr<IOGroup> iogroup) override;
+            std::set<std::string> signal_names(void) const override;
+            std::set<std::string> control_names(void) const override;
+            int signal_domain_type(const std::string &signal_name) const override;
+            int control_domain_type(const std::string &control_name) const override;
+            int push_signal(const std::string &signal_name,
+                            int domain_type,
+                            int domain_idx) override;
+            void push_region_signal_total(int signal_idx,
+                                          int domain_type,
+                                          int domain_idx) override;
+            int push_combined_signal(const std::string &signal_name,
+                                     int domain_type,
+                                     int domain_idx,
+                                     const std::vector<int> &sub_signal_idx) override;
+            int push_control(const std::string &control_name,
+                             int domain_type,
+                             int domain_idx) override;
+            int num_signal(void) const override;
+            int num_control(void) const override;
+            double sample(int signal_idx) override;
+            double sample_region_total(int signal_idx, uint64_t region_id) override;
+            void adjust(int control_idx, double setting) override;
+            void read_batch(void) override;
+            void write_batch(void) override;
+            double read_signal(const std::string &signal_name,
+                               int domain_type,
+                               int domain_idx) override;
+            void write_control(const std::string &control_name,
+                               int domain_type,
+                               int domain_idx,
+                               double setting) override;
+            void save_control(void) override;
+            void restore_control(void) override;
+            std::function<double(const std::vector<double> &)> agg_function(std::string signal_name) const override;
+        private:
+            void record(const std::string &func_name, const std::string &input_str, const std::string &output_str) const;
+            const size_t M_BUFFER_LIMIT;
+            bool m_is_enabled;
+            mutable std::ofstream m_stream;
+            mutable std::ostringstream m_buffer;
+    };
+
     IPlatformIO &platform_io(void)
     {
+        /// @todo early return for now, address later (if there is push back)
+        static int do_platform_io_record = geopm_env_do_platform_io_record();
+        if (do_platform_io_record) {
+            static PlatformIORecorder instance;
+            std::cerr << "<geopm> Warning running with PlatformIORecorder" << std::endl;
+            return instance;
+        }
         static PlatformIO instance;
         return instance;
     }
@@ -637,4 +697,226 @@ namespace geopm
         }
         return result;
     }
+
+    PlatformIORecorder::PlatformIORecorder()
+        : PlatformIO()
+        , M_BUFFER_LIMIT(134217728) // 128 MiB
+    {
+        if (geopm_env_do_trace()) {
+            char hostname[NAME_MAX];
+            int err = gethostname(hostname, NAME_MAX);
+            if (err) {
+                throw Exception("Tracer::Tracer() gethostname() failed", err, __FILE__, __LINE__);
+            }
+            std::ostringstream output_path;
+            output_path << geopm_env_platform_io_record_path() << "pio_record-" << hostname;
+            m_stream.open(output_path.str());
+            //m_buffer << std::setprecision(16);/// @todo?
+            m_is_enabled = true;
+
+            if (!m_stream.good()) {
+                std::cerr << "Warning: unable to open record file '" << output_path.str()
+                          << "': " << strerror(errno) << std::endl;
+                m_is_enabled = false;
+            }
+        }
+    }
+
+    PlatformIORecorder::~PlatformIORecorder()
+    {
+        if (m_stream.good() && m_is_enabled) {
+            m_stream << m_buffer.str();
+            m_stream.close();
+        }
+    }
+
+    void PlatformIORecorder::record(const std::string &func_name, const std::string &input_str, const std::string &output_str) const
+    {
+        m_buffer << func_name << " (" << input_str << ")-> " << output_str << std::endl;
+        if (m_buffer.tellp() > (off_t) M_BUFFER_LIMIT) {
+            m_stream << m_buffer.str();
+            m_buffer.str("");
+        }
+    }
+
+    void PlatformIORecorder::register_iogroup(std::shared_ptr<IOGroup> iogroup)
+    {
+        PlatformIO::register_iogroup(iogroup);
+    }
+
+    std::set<std::string> PlatformIORecorder::signal_names(void) const
+    {
+        std::set<std::string> result = PlatformIO::signal_names();
+        std::stringstream tmp_stream;
+        tmp_stream << "{";
+        size_t curr = 0;
+        for (auto &signal : result) {
+            tmp_stream << signal;
+            curr++;
+            if (curr < result.size()) {
+                tmp_stream << ",";
+            }
+        }
+        tmp_stream << "}";
+        record(__func__, "", tmp_stream.str());
+        return result;
+    }
+
+    std::set<std::string> PlatformIORecorder::control_names(void) const
+    {
+        std::set<std::string> result = PlatformIO::control_names();
+        std::stringstream tmp_stream;
+        tmp_stream << "{";
+        size_t curr = 0;
+        for (auto &control : result) {
+            tmp_stream << control;
+            curr++;
+            if (curr < result.size()) {
+                tmp_stream << ",";
+            }
+        }
+        tmp_stream << "}";
+        record(__func__, "", tmp_stream.str());
+        return result;
+    }
+
+    int PlatformIORecorder::signal_domain_type(const std::string &signal_name) const
+    {
+        int result = PlatformIO::signal_domain_type(signal_name);
+        record(__func__, signal_name, std::to_string(result));
+        return result;
+    }
+
+    int PlatformIORecorder::control_domain_type(const std::string &control_name) const
+    {
+        int result = PlatformIO::control_domain_type(control_name);
+        record(__func__, control_name, std::to_string(result));
+        return result;
+    }
+
+    int PlatformIORecorder::push_signal(const std::string &signal_name,
+                    int domain_type,
+                    int domain_idx)
+    {
+        int result = PlatformIO::push_signal(signal_name, domain_type, domain_idx);
+        record(__func__, signal_name + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx), std::to_string(result));
+        return result;
+    }
+
+    void PlatformIORecorder::push_region_signal_total(int signal_idx,
+                                  int domain_type,
+                                  int domain_idx)
+    {
+        PlatformIO::push_region_signal_total(signal_idx, domain_type, domain_idx);
+        record(__func__, std::to_string(signal_idx) + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx), "");
+    }
+
+    int PlatformIORecorder::push_combined_signal(const std::string &signal_name,
+                             int domain_type,
+                             int domain_idx,
+                             const std::vector<int> &sub_signal_idx)
+    {
+        int result = PlatformIO::push_combined_signal(signal_name, domain_type, domain_idx, sub_signal_idx);
+        std::stringstream tmp_stream;
+        tmp_stream << "{";
+        size_t curr = 0;
+        for (auto &sub_sig_idx : sub_signal_idx) {
+            tmp_stream << sub_sig_idx;
+            curr++;
+            if (curr < sub_signal_idx.size()) {
+                tmp_stream << ",";
+            }
+        }
+        tmp_stream << "}";
+        record(__func__, signal_name + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx) + ", " + tmp_stream.str(), std::to_string(result));
+        return result;
+    }
+
+    int PlatformIORecorder::push_control(const std::string &control_name,
+                     int domain_type,
+                     int domain_idx)
+    {
+        int result = PlatformIO::push_control(control_name, domain_type, domain_idx);
+        record(__func__, control_name + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx), std::to_string(result));
+        return result;
+    }
+
+    int PlatformIORecorder::num_signal(void) const
+    {
+        int result = PlatformIO::num_signal();
+        record(__func__, "", std::to_string(result));
+        return result;
+    }
+
+    int PlatformIORecorder::num_control(void) const
+    {
+        int result = PlatformIO::num_control();
+        record(__func__, "", std::to_string(result));
+        return result;
+    }
+
+    double PlatformIORecorder::sample(int signal_idx)
+    {
+        double result = PlatformIO::sample(signal_idx);
+        record(__func__, std::to_string(signal_idx), std::to_string(result));
+        return result;
+    }
+
+    double PlatformIORecorder::sample_region_total(int signal_idx, uint64_t region_id)
+    {
+        double result = PlatformIO::sample_region_total(signal_idx, region_id);
+        record(__func__, std::to_string(signal_idx) + ", " + std::to_string(region_id), std::to_string(result));
+        return result;
+    }
+
+    void PlatformIORecorder::adjust(int control_idx, double setting)
+    {
+        PlatformIO::adjust(control_idx, setting);
+        record(__func__, std::to_string(control_idx) + ", " + std::to_string(setting), "");
+    }
+
+    void PlatformIORecorder::read_batch(void)
+    {
+        PlatformIO::read_batch();
+    }
+
+    void PlatformIORecorder::write_batch(void)
+    {
+        PlatformIO::write_batch();
+    }
+
+    double PlatformIORecorder::read_signal(const std::string &signal_name,
+                       int domain_type,
+                       int domain_idx)
+    {
+        double result = PlatformIO::read_signal(signal_name, domain_type, domain_idx);
+        record(__func__, signal_name + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx), std::to_string(result));
+        return result;
+    }
+
+    void PlatformIORecorder::write_control(const std::string &control_name,
+                       int domain_type,
+                       int domain_idx,
+                       double setting)
+    {
+        PlatformIO::write_control(control_name, domain_type, domain_idx, setting);
+        record(__func__, control_name + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx), "");
+    }
+
+    void PlatformIORecorder::save_control(void)
+    {
+        PlatformIO::save_control();
+    }
+
+    void PlatformIORecorder::restore_control(void)
+    {
+        PlatformIO::restore_control();
+    }
+
+    std::function<double(const std::vector<double> &)> PlatformIORecorder::agg_function(std::string signal_name) const
+    {
+        std::function<double(const std::vector<double> &)> result = [] (const std::vector<double> &input) { return 0.0; };
+        return result;
+    }
+
 }

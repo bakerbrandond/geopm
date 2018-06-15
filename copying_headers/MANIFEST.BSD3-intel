@@ -300,6 +300,8 @@ test/ProfileIOSampleTest.cpp
 test/ProfileTableTest.cpp
 test/ProfileTest.cpp
 test/RegionTest.cpp
+test/ReplayPlatformIO.cpp
+test/ReplayPlatformIO.hpp
 test/ReporterTest.cpp
 test/RuntimeRegulatorTest.cpp
 test/SampleRegulatorTest.cpp

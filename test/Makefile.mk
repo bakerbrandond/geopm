@@ -420,6 +420,8 @@ test_geopm_test_SOURCES = test/geopm_test.cpp \
                           test/TimeIOGroupTest.cpp \
                           test/MSRIOGroupTest.cpp \
                           test/geopm_test.hpp \
+                          test/ReplayPlatformIO.hpp \
+                          test/ReplayPlatformIO.cpp \
                           test/MockPlatformIO.hpp \
                           test/MockPlatformTopo.hpp \
                           test/ProfileIOSampleTest.cpp \

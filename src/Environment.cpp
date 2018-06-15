@@ -63,6 +63,7 @@ namespace geopm
             const char *comm(void) const;
             const char *policy(void) const;
             const char *shmkey(void) const;
+            const char *pio_record_path(void) const;
             const char *trace(void) const;
             const char *plugin_path(void) const;
             const char *profile(void) const;
@@ -71,6 +72,7 @@ namespace geopm
             int num_trace_signal(void) const;
             int report_verbosity(void) const;
             int pmpi_ctl(void) const;
+            int do_pio_record(void) const;
             int do_region_barrier(void) const;
             int do_trace(void) const;
             int do_profile() const;
@@ -85,11 +87,13 @@ namespace geopm
             std::string m_policy;
             std::string m_agent;
             std::string m_shmkey;
+            std::string m_pio_record_path;
             std::string m_trace;
             std::string m_plugin_path;
             std::string m_profile;
             int m_report_verbosity;
             int m_pmpi_ctl;
+            bool m_do_pio_record;
             bool m_do_region_barrier;
             bool m_do_trace;
             bool m_do_profile;
@@ -122,11 +126,13 @@ namespace geopm
         m_policy = "";
         m_agent = "monitor";
         m_shmkey = "/geopm-shm-" + std::to_string(geteuid());
+        m_pio_record_path = "";
         m_trace = "";
         m_plugin_path = "";
         m_profile = "";
         m_report_verbosity = 0;
         m_pmpi_ctl = GEOPM_PMPI_CTL_NONE;
+        m_do_pio_record = false;
         m_do_region_barrier = false;
         m_do_trace = false;
         m_do_profile = false;
@@ -150,6 +156,7 @@ namespace geopm
         if (!get_env("GEOPM_REPORT_VERBOSITY", m_report_verbosity) && m_report.size()) {
             m_report_verbosity = 1;
         }
+        m_do_pio_record = get_env("GEOPM_PLATFORM_IO_RECORD", m_pio_record_path);
         m_do_region_barrier = get_env("GEOPM_REGION_BARRIER", tmp_str);
         (void)get_env("GEOPM_PROFILE_TIMEOUT", m_profile_timeout);
         if (get_env("GEOPM_PMPI_CTL", tmp_str)) {
@@ -247,6 +254,11 @@ namespace geopm
         return m_shmkey.c_str();
     }
 
+    const char *Environment::pio_record_path(void) const
+    {
+        return m_pio_record_path.c_str();
+    }
+
     const char *Environment::trace(void) const
     {
         return m_trace.c_str();
@@ -285,6 +297,11 @@ namespace geopm
     int Environment::pmpi_ctl(void) const
     {
         return m_pmpi_ctl;
+    }
+
+    int Environment::do_pio_record(void) const
+    {
+        return m_do_pio_record;
     }
 
     int Environment::do_region_barrier(void) const
@@ -340,6 +357,10 @@ extern "C"
         return geopm::environment().shmkey();
     }
 
+    const char *geopm_env_platform_io_record_path(void) {
+        return geopm::environment().pio_record_path();
+    }
+
     const char *geopm_env_trace(void)
     {
         return geopm::environment().trace();
@@ -382,6 +403,11 @@ extern "C"
     int geopm_env_pmpi_ctl(void)
     {
         return geopm::environment().pmpi_ctl();
+    }
+
+    int geopm_env_do_platform_io_record(void)
+    {
+        return geopm::environment().do_pio_record();
     }
 
     int geopm_env_do_region_barrier(void)
