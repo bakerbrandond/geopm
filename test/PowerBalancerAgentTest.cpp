@@ -215,7 +215,7 @@ TEST_F(PowerBalancerAgentTest, ascend_descend)
     m_agent->init(level, m_fan_in, false);
 
     std::vector<double> in_budget = {200};
-    ASSERT_EQ(in_budget.size(), m_num_policy);
+    ASSERT_EQ(in_budget.size(), (size_t) m_num_policy);
     std::vector<std::vector<double> > expected;
     std::vector<std::vector<double> >result(m_fan_in[level], std::vector<double>(m_num_policy, NAN));
     // todo fix values here
@@ -225,7 +225,7 @@ TEST_F(PowerBalancerAgentTest, ascend_descend)
     // initial, split budget evenly
     // the input is average, not total, so all children will just get the same budget as in the input
     expected = { in_budget, in_budget };
-    ASSERT_EQ(expected.size(), m_fan_in[level]);
+    ASSERT_EQ(expected.size(), (size_t) m_fan_in[level]);
 
     EXPECT_TRUE(m_agent->descend(in_budget, result));
     for (size_t child = 0; child < result.size(); ++child) {
@@ -254,7 +254,7 @@ TEST_F(PowerBalancerAgentTest, ascend_descend)
 
     // updated runtimes
     expected = { {190}, {210} };
-    ASSERT_EQ(expected.size(), m_fan_in[level]);
+    ASSERT_EQ(expected.size(), (size_t) m_fan_in[level]);
     EXPECT_TRUE(m_agent->descend(in_budget, result));
     for (size_t child = 0; child < result.size(); ++child) {
         check_result(expected[child], result[child]);
@@ -274,7 +274,7 @@ TEST_F(PowerBalancerAgentTest, ascend_descend)
 
 
     expected = { {189}, {211} };
-    ASSERT_EQ(expected.size(), m_fan_in[level]);
+    ASSERT_EQ(expected.size(), (size_t) m_fan_in[level]);
     EXPECT_TRUE(m_agent->descend(in_budget, result));
 
     for (size_t child = 0; child < result.size(); ++child) {
