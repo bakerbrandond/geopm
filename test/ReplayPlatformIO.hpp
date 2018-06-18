@@ -36,20 +36,43 @@
 #include <fstream>
 #include <memory>
 #include <map>
+#include <set>
 
 #include "PlatformIO.hpp"
 #include "IOGroup.hpp"
 #include "MockPlatformIO.hpp"
 
-class ReplayPlatformIO : public geopm::IPlatformIO
+namespace geopm {
+    class IPlatformIO;
+};
+
+class ReplayMockPlatformIO;
+
+class ReplayMockPlatformIO : public MockPlatformIO
+{
+    public:
+        ReplayMockPlatformIO() = default;
+        ~ReplayMockPlatformIO() = default;
+        testing::Sequence &get_sequence()
+        {
+            return m_seq;
+        }
+
+    private:
+        testing::Sequence m_seq;
+};
+
+class ReplayPlatformIO
 {
     public:
         ReplayPlatformIO(const std::string &record_path);
-        IPlatformIO &platform_io(void);
+        geopm::IPlatformIO &platform_io(void);
     private:
-        std::map<std::string, std::function<void(const std::string &input_str,
-                                                 const std::string &output_str)> > m_func_map;
-        std::unique_ptr<MockPlatformIO> m_pio_mock;
+        std::map<std::string, std::function<void(std::string input_str,
+                                                 std::string output_str,
+                                                 ReplayMockPlatformIO &pio)> > m_func_map;
+        std::set<std::string> m_non_ret_funcs;
+        std::unique_ptr<ReplayMockPlatformIO> m_pio_mock;
         std::ifstream m_record_file;
 };
 

@@ -35,6 +35,7 @@
 #include "gmock/gmock.h"
 
 #include "PowerBalancerAgent.hpp"
+#include "ReplayPlatformIO.hpp"
 #include "MockPlatformIO.hpp"
 #include "MockPlatformTopo.hpp"
 #include "Helper.hpp"
@@ -369,4 +370,9 @@ TEST_F(PowerBalancerAgentTest, split_budget) {
     EXPECT_EQ(expected, result);
 
 
+}
+
+TEST_F(PowerBalancerAgentTest, something)
+{
+    ReplayPlatformIO replayer("pio_record-mr-fusion8");
 }

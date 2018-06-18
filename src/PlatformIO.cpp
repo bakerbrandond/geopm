@@ -732,7 +732,7 @@ namespace geopm
 
     void PlatformIORecorder::record(const std::string &func_name, const std::string &input_str, const std::string &output_str) const
     {
-        m_buffer << func_name << " (" << input_str << ")-> " << output_str << std::endl;
+        m_buffer << func_name << "(" << input_str << ")" << output_str << std::endl;
         if (m_buffer.tellp() > (off_t) M_BUFFER_LIMIT) {
             m_stream << m_buffer.str();
             m_buffer.str("");
@@ -799,7 +799,7 @@ namespace geopm
                     int domain_idx)
     {
         int result = PlatformIO::push_signal(signal_name, domain_type, domain_idx);
-        record(__func__, signal_name + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx), std::to_string(result));
+        record(__func__, signal_name + "," + std::to_string(domain_type) + "," + std::to_string(domain_idx), std::to_string(result));
         return result;
     }
 
@@ -808,7 +808,7 @@ namespace geopm
                                   int domain_idx)
     {
         PlatformIO::push_region_signal_total(signal_idx, domain_type, domain_idx);
-        record(__func__, std::to_string(signal_idx) + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx), "");
+        record(__func__, std::to_string(signal_idx) + "," + std::to_string(domain_type) + "," + std::to_string(domain_idx), "");
     }
 
     int PlatformIORecorder::push_combined_signal(const std::string &signal_name,
@@ -828,7 +828,7 @@ namespace geopm
             }
         }
         tmp_stream << "}";
-        record(__func__, signal_name + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx) + ", " + tmp_stream.str(), std::to_string(result));
+        record(__func__, signal_name + "," + std::to_string(domain_type) + "," + std::to_string(domain_idx) + "," + tmp_stream.str(), std::to_string(result));
         return result;
     }
 
@@ -837,7 +837,7 @@ namespace geopm
                      int domain_idx)
     {
         int result = PlatformIO::push_control(control_name, domain_type, domain_idx);
-        record(__func__, control_name + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx), std::to_string(result));
+        record(__func__, control_name + "," + std::to_string(domain_type) + "," + std::to_string(domain_idx), std::to_string(result));
         return result;
     }
 
@@ -865,14 +865,14 @@ namespace geopm
     double PlatformIORecorder::sample_region_total(int signal_idx, uint64_t region_id)
     {
         double result = PlatformIO::sample_region_total(signal_idx, region_id);
-        record(__func__, std::to_string(signal_idx) + ", " + std::to_string(region_id), std::to_string(result));
+        record(__func__, std::to_string(signal_idx) + "," + std::to_string(region_id), std::to_string(result));
         return result;
     }
 
     void PlatformIORecorder::adjust(int control_idx, double setting)
     {
         PlatformIO::adjust(control_idx, setting);
-        record(__func__, std::to_string(control_idx) + ", " + std::to_string(setting), "");
+        record(__func__, std::to_string(control_idx) + "," + std::to_string(setting), "");
     }
 
     void PlatformIORecorder::read_batch(void)
@@ -890,7 +890,7 @@ namespace geopm
                        int domain_idx)
     {
         double result = PlatformIO::read_signal(signal_name, domain_type, domain_idx);
-        record(__func__, signal_name + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx), std::to_string(result));
+        record(__func__, signal_name + "," + std::to_string(domain_type) + "," + std::to_string(domain_idx), std::to_string(result));
         return result;
     }
 
@@ -900,7 +900,7 @@ namespace geopm
                        double setting)
     {
         PlatformIO::write_control(control_name, domain_type, domain_idx, setting);
-        record(__func__, control_name + ", " + std::to_string(domain_type) + ", " + std::to_string(domain_idx), "");
+        record(__func__, control_name + "," + std::to_string(domain_type) + "," + std::to_string(domain_idx), "");
     }
 
     void PlatformIORecorder::save_control(void)
