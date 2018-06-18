@@ -40,38 +40,13 @@
 #include <string>
 #include <stdio.h>
 
+#include "geopm_topo.h"
+
 namespace geopm
 {
     class IPlatformTopo
     {
         public:
-            enum m_domain_e {
-                /// @brief Reserved to represent an invalid domain
-                M_DOMAIN_INVALID = 0,
-                /// @brief All components on a user allocated compute
-                ///        node (one per controller)
-                M_DOMAIN_BOARD,
-                /// @Brief Single processor package in one socket
-                M_DOMAIN_PACKAGE,
-                /// @brief Group of associated hyper-threads
-                M_DOMAIN_CORE,
-                /// @brief Linux logical CPU
-                M_DOMAIN_CPU,
-                /// @brief Standard off package DIMM (DRAM or NAND)
-                M_DOMAIN_BOARD_MEMORY,
-                /// @brief On package memory (MCDRAM)
-                M_DOMAIN_PACKAGE_MEMORY,
-                /// @brief Network interface controller on the PCI bus
-                M_DOMAIN_BOARD_NIC,
-                /// @brief Network interface controller on the
-                ///        processor package
-                M_DOMAIN_PACKAGE_NIC,
-                /// @brief Accelerator card on the PCI bus
-                M_DOMAIN_BOARD_ACCELERATOR,
-                /// @brief Accelerator unit on the package (e.g
-                ///        on-package graphics)
-                M_DOMAIN_PACKAGE_ACCELERATOR,
-                M_NUM_DOMAIN,
                 /// @brief Start of user defined collections of Linux
                 ///        logical CPUs
                 M_DOMAIN_CPU_GROUP_BEGIN = 4096,
