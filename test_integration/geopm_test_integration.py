@@ -867,6 +867,88 @@ class TestIntegration(unittest.TestCase):
             gemm_region = [key for key in region_names if key.lower().find('gemm') != -1]
             self.assertLessEqual(1, len(gemm_region))
 
+    @skip_unless_cpufreq()
+    def test_counters(self):
+        """
+        Test the counters.
+        """
+        name = 'test_counters'
+        loop_count = 10
+        dgemm_bigo = 20.25
+        dgemm_bigo_jlse = 35.647
+        dgemm_bigo_quartz = 29.12
+        hostname = socket.gethostname()
+        if hostname.endswith('.alcf.anl.gov'):
+            dgemm_bigo = dgemm_bigo_jlse
+        else:
+            dgemm_bigo = dgemm_bigo_quartz
+
+        app_conf_name = name + '_app.config'
+        app_conf = geopmpy.io.BenchConf(app_conf_name)
+        self._tmp_files.append(app_conf.get_path())
+        app_conf.set_loop_count(loop_count)
+        app_conf.append_region('dgemm', dgemm_bigo)
+
+        num_node = 1
+        num_rank = 4
+
+        freqs = geopmpy.analysis.sys_freq_avail()
+        max_non_turbo = freqs[-2]
+        os.environ['GEOPM_EFFICIENT_FREQ_MIN'] = str(max_non_turbo)
+        os.environ['GEOPM_EFFICIENT_FREQ_MAX'] = str(max_non_turbo)
+
+        # Setup run with new code
+        os.environ['GEOPM_AGENT'] = 'energy_efficient'
+        report_path = name + '_new.report'
+        trace_path = name + '_new.trace'
+
+        ctl_conf = geopmpy.io.CtlConf(name + '_ctl.config', self._mode, self._options)
+        self._tmp_files.append(ctl_conf.get_path())
+        launcher = geopm_test_launcher.TestLauncher(app_conf, ctl_conf, report_path, trace_path)
+        launcher.set_num_node(num_node)
+        launcher.set_num_rank(num_rank)
+        launcher.run(name)
+
+        self._output = geopmpy.io.AppOutput(report_path, trace_path + '*')
+        node_names = self._output.get_node_names()
+        self.assertEqual(num_node, len(node_names))
+
+        new_runtime = {}
+        new_energy = {}
+        new_frequency = {}
+
+        for nn in node_names:
+            rr = self._output.get_report(nn)
+            new_runtime[nn] = rr['dgemm']['runtime']
+            new_energy[nn] = rr['dgemm']['energy']
+            new_frequency[nn] = rr['dgemm']['frequency']
+
+        # Setup run with old code
+        del os.environ['GEOPM_AGENT']
+        report_path = name + '_old.report'
+        trace_path = name + '_old.trace'
+        self._options['power_budget'] = 350
+        self._options['tree_decider'] = 'static_policy'
+        self._options['leaf_decider'] = 'efficient_freq'
+
+        ctl_conf = geopmpy.io.CtlConf(name + '_ctl.config', self._mode, self._options)
+        self._tmp_files.append(ctl_conf.get_path())
+        launcher = geopm_test_launcher.TestLauncher(app_conf, ctl_conf, report_path, trace_path)
+        launcher.set_num_node(num_node)
+        launcher.set_num_rank(num_rank)
+        launcher.run(name)
+
+        self._output = geopmpy.io.AppOutput(report_path, trace_path + '*')
+        node_names = self._output.get_node_names()
+        self.assertEqual(num_node, len(node_names))
+
+        # Compare data gathered from old code path and new
+        for nn in node_names:
+            rr = self._output.get_report(nn)
+            self.assertNear(rr['dgemm']['runtime'], new_runtime[nn], 0.10)    # 10% variabiliy
+            self.assertNear(rr['dgemm']['frequency'], new_frequency[nn], 0.1) # 1% for frequencies
+            self.assertNear(rr['dgemm']['energy'], new_energy[nn], 0.10)
+
     @skip_unless_run_long_tests()
     @skip_unless_platform_bdx()
     @skip_unless_cpufreq()
