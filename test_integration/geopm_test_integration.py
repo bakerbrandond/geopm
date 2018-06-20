@@ -907,7 +907,7 @@ class TestIntegration(unittest.TestCase):
         launcher = geopm_test_launcher.TestLauncher(app_conf, ctl_conf, report_path, trace_path)
         launcher.set_num_node(num_node)
         launcher.set_num_rank(num_rank)
-        launcher.run(name)
+        launcher.run(name + '_new')
 
         self._output = geopmpy.io.AppOutput(report_path, trace_path + '*')
         node_names = self._output.get_node_names()
@@ -936,7 +936,7 @@ class TestIntegration(unittest.TestCase):
         launcher = geopm_test_launcher.TestLauncher(app_conf, ctl_conf, report_path, trace_path)
         launcher.set_num_node(num_node)
         launcher.set_num_rank(num_rank)
-        launcher.run(name)
+        launcher.run(name + '_old')
 
         self._output = geopmpy.io.AppOutput(report_path, trace_path + '*')
         node_names = self._output.get_node_names()
