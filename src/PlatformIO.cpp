@@ -214,8 +214,6 @@ namespace geopm
                             std::to_string(domain_type) + "\"",
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
         }
-        std::cout << std::string(__func__) << "(" << signal_name << ", " << domain_type << ", " << domain_idx
-            << ") return: " << result << std::endl;
         return result;
     }
 
@@ -363,13 +361,9 @@ namespace geopm
 
     double PlatformIO::sample_region_total(int signal_idx, uint64_t region_id)
     {
-        std::cout << std::string(__func__) << "(" << signal_idx << ", "
-            << std::hex << region_id << ")" << std::endl << "{" << std::endl;
         double current_value = 0.0;
         uint64_t curr_rid = geopm_signal_to_field(sample(m_region_id_idx.at(signal_idx)));
-        std::cout << "curr_rid: " << curr_rid;
         curr_rid = geopm_region_id_unset_hint(GEOPM_MASK_REGION_HINT, curr_rid);
-        std::cout << "\tcurr_rid (no hint): " << curr_rid << std::dec << std::endl;
         auto idx = std::make_pair(signal_idx, region_id);
         if (m_region_sample_data.find(idx) != m_region_sample_data.end()) {
             const auto &data =  m_region_sample_data.at(idx);
@@ -377,12 +371,9 @@ namespace geopm
             // if currently in this region, add current value to total
             if (region_id == curr_rid &&
                 !std::isnan(data.last_entry_value)) {
-                double tmp = sample(signal_idx) - data.last_entry_value;
-                std::cout << "currently in region_id of interest, adding " << tmp << " to return value" << std::endl;
-                current_value += tmp;
+                current_value += sample(signal_idx) - data.last_entry_value;
             }
         }
-        std::cout << "return " << current_value << std::endl << "}" << std::endl;
         return current_value;
     }
 
@@ -418,7 +409,6 @@ namespace geopm
 
     void PlatformIO::read_batch(void)
     {
-        std::cout << std::string(__func__) << "()" << std::endl << "{" << std::endl;
         for (auto &it : m_iogroup_list) {
             it->read_batch();
         }
@@ -434,9 +424,6 @@ namespace geopm
                 m_last_region_id[it.first] = region_id;
                 // set start value for first region to be recording this signal
                 m_region_sample_data[std::make_pair(it.first, region_id)].last_entry_value = value;
-                std::cout << "(" << it.first << ":" << std::hex << region_id << ")"
-                    << std::dec << ".total: " << m_region_sample_data[std::make_pair(it.first, region_id)].total
-                    << ".last_entry_value: " << m_region_sample_data[std::make_pair(it.first, region_id)].last_entry_value << std::endl;
             }
             else {
                 uint64_t last_rid = m_last_region_id[it.first];
@@ -444,20 +431,13 @@ namespace geopm
                 if (region_id != last_rid) {
                     // add entry to new region
                     m_region_sample_data[std::make_pair(it.first, region_id)].last_entry_value = value;
-                    std::cout << "(" << it.first << ":" << std::hex << region_id << ")"
-                        << std::dec << ".total: " << m_region_sample_data[std::make_pair(it.first, region_id)].total
-                        << ".last_entry_value: " << m_region_sample_data[std::make_pair(it.first, region_id)].last_entry_value << std::endl;
                     // update total for previous region
                     m_region_sample_data[std::make_pair(it.first, last_rid)].total +=
                         value - m_region_sample_data.at(std::make_pair(it.first, last_rid)).last_entry_value;
-                    std::cout << "(" << it.first << ":" << std::hex << last_rid << ")"
-                        << std::dec << ".total: " << m_region_sample_data[std::make_pair(it.first, last_rid)].total
-                        << ".last_entry_value: " << m_region_sample_data[std::make_pair(it.first, last_rid)].last_entry_value << std::endl;
-                    m_last_region_id[it.first] = last_rid;
+                    m_last_region_id[it.first] = region_id;
                 }
             }
         }
-        std::cout << "}" << std::endl;
     }
 
     void PlatformIO::write_batch(void)
