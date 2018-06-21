@@ -43,6 +43,7 @@ namespace geopm
 {
     class MSR;
     class IMSR;
+    class MSRIO;
     class MSRSignal;
     class MSRControl;
     class IMSRIO;
@@ -120,6 +121,7 @@ namespace geopm
             void register_msr_control(const std::string &control_name);
             static std::string plugin_name(void);
             static std::unique_ptr<IOGroup> make_plugin(void);
+            MSRIO &msrio(void);
         private:
             struct m_restore_s {
                 uint64_t value;

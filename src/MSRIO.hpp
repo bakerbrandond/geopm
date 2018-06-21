@@ -36,6 +36,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace geopm
 {
@@ -100,6 +101,9 @@ namespace geopm
             virtual void write_batch(const std::vector<uint64_t> &raw_value) = 0;
     };
 
+    class KNLPlatformImp;
+    class Platform;
+
     class MSRIO : public IMSRIO
     {
         public:
@@ -119,6 +123,7 @@ namespace geopm
                               const std::vector<uint64_t> &write_mask) override;
             void read_batch(std::vector<uint64_t> &raw_value) override;
             void write_batch(const std::vector<uint64_t> &raw_value) override;
+            std::vector<struct geopm_msr_message_s> get_legacy_sample(void);
         private:
             struct m_msr_batch_op_s {
                 uint16_t cpu;      /// @brief In: CPU to execute {rd/wr}msr ins.
@@ -153,6 +158,9 @@ namespace geopm
             struct m_msr_batch_array_s m_write_batch;
             std::vector<struct m_msr_batch_op_s> m_read_batch_op;
             std::vector<struct m_msr_batch_op_s> m_write_batch_op;
+            std::unique_ptr<Platform> m_rapl_plat;
+            std::unique_ptr<KNLPlatformImp> m_legacy_pimp;
+            std::vector<struct geopm_msr_message_s> m_legacy_sample;
     };
 }
 

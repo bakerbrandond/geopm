@@ -71,11 +71,16 @@ namespace geopm
         , m_platform_topo(topo)
         , m_iogroup_list(iogroup_list)
         , m_do_restore(false)
+        , m_msr_iog(NULL)
     {
         if (m_iogroup_list.size() == 0) {
             for (const auto &it : iogroup_factory().plugin_names()) {
                 try {
-                    register_iogroup(iogroup_factory().make_plugin(it));
+                    auto tmp = iogroup_factory().make_plugin(it);
+                    if (it.compare("MSR") == 0) {
+                        m_msr_iog = (MSRIOGroup *) tmp.get();
+                    }
+                    register_iogroup(std::move(tmp));
                 }
                 catch (const geopm::Exception &ex) {
 #ifdef GEOPM_DEBUG
@@ -414,6 +419,9 @@ namespace geopm
         }
         m_is_active = true;
 
+        if (m_msr_iog) {
+            m_msr_iog->msrio()->sample();
+        }
         // aggregate region totals
         for (const auto &it : m_region_id_idx) {
             double value = sample(it.first);

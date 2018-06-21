@@ -40,6 +40,9 @@
 #include <map>
 
 #include "Exception.hpp"
+#include "Helper.hpp"
+#include "RAPLPlatform.hpp"
+#include "KNLPlatformImp.hpp"
 #include "MSRIO.hpp"
 #include "geopm_sched.h"
 #include "config.h"
@@ -57,13 +60,16 @@ namespace geopm
     MSRIO::MSRIO(int num_cpu)
         : m_num_cpu(num_cpu)
         , m_file_desc(m_num_cpu + 1, -1) // Last file descriptor is for the batch file
+        , m_rapl_plat(std::unique_ptr<Platform>(new RAPLPlatform()))
+        , m_legacy_pimp(geopm::make_unique<KNLPlatformImp>(m_file_desc))
         , m_is_batch_enabled(true)
         , m_read_batch({0, NULL})
         , m_write_batch({0, NULL})
         , m_read_batch_op(0)
         , m_write_batch_op(0)
     {
-
+        m_rapl_plat->set_implementation(m_legacy_pimp.get(), true);
+        m_legacy_sample.resize(m_rapl_plat->capacity());
     }
 
     MSRIO::~MSRIO()
@@ -72,6 +78,12 @@ namespace geopm
             close_msr(cpu_idx);
         }
         close_msr_batch();
+    }
+
+    std::vector<struct geopm_msr_message_s> MSRIO::get_legacy_sample(void)
+    {
+        m_rapl_plat->sample(m_legacy_sample);
+        return m_legacy_sample;
     }
 
     uint64_t MSRIO::read_msr(int cpu_idx,

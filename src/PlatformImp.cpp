@@ -52,8 +52,10 @@
 namespace geopm
 {
 
+    std::vector<int> g_cpu_file_desc;
     PlatformImp::PlatformImp()
-        : m_num_logical_cpu(0)
+        : m_cpu_file_desc(g_cpu_file_desc)
+        , m_num_logical_cpu(0)
         , m_num_hw_cpu(0)
         , m_num_tile(0)
         , m_num_tile_group(0)
@@ -61,7 +63,6 @@ namespace geopm
         , m_num_core_per_tile(0)
         , m_control_latency_ms(10.0)
         , m_tdp_pkg_watts(DBL_MIN)
-        , m_msr_batch_desc(-1)
         , m_is_batch_enabled(false)
         , m_batch({0, NULL})
         , m_trigger_offset(0)
@@ -72,8 +73,9 @@ namespace geopm
 
     }
 
-    PlatformImp::PlatformImp(int num_energy_signal, int num_counter_signal, double control_latency, const std::map<std::string, std::pair<off_t, unsigned long> > *msr_map_ptr)
-        : m_msr_map_ptr(msr_map_ptr)
+    PlatformImp::PlatformImp(std::vector<int> &cpu_file_desc, int num_energy_signal, int num_counter_signal, double control_latency, const std::map<std::string, std::pair<off_t, unsigned long> > *msr_map_ptr)
+        : m_cpu_file_desc(cpu_file_desc)
+        , m_msr_map_ptr(msr_map_ptr)
         , m_num_logical_cpu(0)
         , m_num_hw_cpu(0)
         , m_num_tile(0)
@@ -84,7 +86,30 @@ namespace geopm
         , m_num_counter_signal(num_counter_signal)
         , m_control_latency_ms(control_latency)
         , m_tdp_pkg_watts(DBL_MIN)
-        , m_msr_batch_desc(-1)
+        , m_is_batch_enabled(false)
+        , m_batch({0, NULL})
+        , m_trigger_offset(0)
+        , m_trigger_value(0)
+        , m_is_initialized(false)
+        , M_MSR_SAVE_FILE_PATH("/tmp/geopm-msr-initial-vals-XXXXXX")
+        , m_is_piggyback(true)
+    {
+
+    }
+
+    PlatformImp::PlatformImp(int num_energy_signal, int num_counter_signal, double control_latency, const std::map<std::string, std::pair<off_t, unsigned long> > *msr_map_ptr)
+        : m_msr_map_ptr(msr_map_ptr)
+        , m_cpu_file_desc(g_cpu_file_desc)
+        , m_num_logical_cpu(0)
+        , m_num_hw_cpu(0)
+        , m_num_tile(0)
+        , m_num_tile_group(0)
+        , m_num_package(0)
+        , m_num_core_per_tile(0)
+        , m_num_energy_signal(num_energy_signal)
+        , m_num_counter_signal(num_counter_signal)
+        , m_control_latency_ms(control_latency)
+        , m_tdp_pkg_watts(DBL_MIN)
         , m_is_batch_enabled(false)
         , m_batch({0, NULL})
         , m_trigger_offset(0)
@@ -112,7 +137,6 @@ namespace geopm
         , m_tdp_pkg_watts(other.m_tdp_pkg_watts)
         , m_msr_value_last(other.m_msr_value_last)
         , m_msr_overflow_offset(other.m_msr_overflow_offset)
-        , m_msr_batch_desc(other.m_msr_batch_desc)
         , m_is_batch_enabled(other.m_is_batch_enabled)
         , m_batch(other.m_batch)
         , m_trigger_offset(other.m_trigger_offset)
@@ -133,12 +157,15 @@ namespace geopm
             free(m_batch.ops);
         }
 
-        for (int i = 0; i < m_num_logical_cpu; ++i) {
-            msr_close(i);
-        }
+        if (!m_is_piggyback) {
+            for (int i = 0; i < m_num_logical_cpu; ++i) {
+                msr_close(i);
+            }
 
-        if (m_msr_batch_desc != -1) {
-            close(m_msr_batch_desc);
+            if (m_cpu_file_desc[m_num_logical_cpu] != -1) {
+
+                close(m_cpu_file_desc[m_num_logical_cpu]);
+            }
         }
 
         remove(m_msr_save_file_path.c_str());
@@ -148,11 +175,13 @@ namespace geopm
     {
         if (!m_is_initialized) {
             parse_hw_topology();
-            for (int i = 0; i < m_num_logical_cpu; i++) {
-                msr_open(i);
+            if (!m_is_piggyback) {
+                for (int i = 0; i < m_num_logical_cpu; i++) {
+                    msr_open(i);
+                }
+                save_msr_state(M_MSR_SAVE_FILE_PATH.c_str());
+                msr_initialize();
             }
-            save_msr_state(M_MSR_SAVE_FILE_PATH.c_str());
-            msr_initialize();
             m_is_initialized = true;
         }
     }
@@ -302,7 +331,7 @@ namespace geopm
 
     void PlatformImp::batch_msr_read(void)
     {
-        int rv = ioctl(m_msr_batch_desc, X86_IOC_MSR_BATCH, &m_batch);
+        int rv = ioctl(m_cpu_file_desc[m_num_logical_cpu], X86_IOC_MSR_BATCH, &m_batch);
 
         if (rv) {
             throw Exception("read from /dev/cpu/msr_batch failed", GEOPM_ERROR_MSR_READ, __FILE__, __LINE__);
@@ -337,8 +366,8 @@ namespace geopm
         if (err == 0) {
             snprintf(m_msr_path, NAME_MAX, "/dev/cpu/%d/msr_safe", cpu_num);
             //check for batch support
-            m_msr_batch_desc = open("/dev/cpu/msr_batch", O_RDWR);
-            if (m_msr_batch_desc != -1) {
+            m_cpu_file_desc[m_num_logical_cpu] = open("/dev/cpu/msr_batch", O_RDWR);
+            if (m_cpu_file_desc[m_num_logical_cpu] != -1) {
                 m_is_batch_enabled = true;
             }
             return;
@@ -377,7 +406,7 @@ namespace geopm
             return;
         }
         //all is good, save handle
-        m_cpu_file_desc.push_back(fd);
+        m_cpu_file_desc[cpu] = fd;
     }
 
     void PlatformImp::msr_close(int cpu)
@@ -406,6 +435,10 @@ namespace geopm
     void PlatformImp::parse_hw_topology(void)
     {
         m_num_logical_cpu = m_topology.num_domain(GEOPM_DOMAIN_CPU);
+        if (!m_is_piggyback) {
+            m_cpu_file_desc.resize(m_num_logical_cpu + 1);
+            std::fill(m_cpu_file_desc.begin(), m_cpu_file_desc.end(), -1);
+        }
         m_num_package = m_topology.num_domain(GEOPM_DOMAIN_PACKAGE);
         m_num_hw_cpu = m_topology.num_domain(GEOPM_DOMAIN_PACKAGE_CORE);
         m_num_cpu_per_core = m_num_logical_cpu / m_num_hw_cpu;

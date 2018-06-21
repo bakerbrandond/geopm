@@ -52,6 +52,7 @@ namespace geopm
         public:
             /// @brief Default constructor.
             KNLPlatformImp();
+            KNLPlatformImp(std::vector<int> &cpu_file_desc);
             KNLPlatformImp(const KNLPlatformImp &other);
             /// @brief Default destructor.
             virtual ~KNLPlatformImp() = default;

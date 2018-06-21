@@ -115,6 +115,11 @@ namespace geopm
         }
     }
 
+    MSRIO &MSRIOGroup::msrio(void)
+    {
+        return *(MSRIO *)m_msrio.get();
+    }
+
     std::set<std::string> MSRIOGroup::signal_names(void) const
     {
         std::set<std::string> result;

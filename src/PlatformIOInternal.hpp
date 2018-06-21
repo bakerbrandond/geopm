@@ -46,6 +46,7 @@
 namespace geopm
 {
     class IOGroup;
+    class MSRIOGroup;
     class CombinedSignal;
     class IPlatformTopo;
 
@@ -133,6 +134,7 @@ namespace geopm
             // only used for comparison, so can leave as a double
             std::map<int, uint64_t> m_last_region_id;
             bool m_do_restore;
+            MSRIOGroup *m_msr_iog;
     };
 }
 

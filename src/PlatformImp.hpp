@@ -77,6 +77,8 @@ namespace geopm
         public:
             /// @brief default PlatformImp constructor
             PlatformImp();
+            PlatformImp(std::vector<int> &cpu_file_desc, int num_energy_signal, int num_counter_signal, double control_latency,
+                        const std::map<std::string, std::pair<off_t, unsigned long> > *msr_map);
             PlatformImp(int num_energy_signal, int num_counter_signal, double control_latency,
                         const std::map<std::string, std::pair<off_t, unsigned long> > *msr_map);
             PlatformImp(const PlatformImp &other);
@@ -300,7 +302,7 @@ namespace geopm
             /// @brief Holds the underlying hardware topology.
             PlatformTopology m_topology;
             /// @brief Holds the file descriptors for the per-cpu special files.
-            std::vector<int> m_cpu_file_desc;
+            std::vector<int> &m_cpu_file_desc;
             /// @brief Map of MSR string name to address offset and write mask.
             /// This is a map is keyed by a string of the MSR's name and maps a pair
             /// which contain the MSR's offset (first) and write mask (second).
@@ -331,7 +333,6 @@ namespace geopm
             std::vector<uint64_t> m_msr_value_last;
             /// @brief The current aggregated overflow for all the counters.
             std::vector<double> m_msr_overflow_offset;
-            int m_msr_batch_desc;
             bool m_is_batch_enabled;
             struct m_msr_batch_array m_batch;
             uint64_t m_trigger_offset;
@@ -344,6 +345,7 @@ namespace geopm
 
             ///Constants
             const std::string M_MSR_SAVE_FILE_PATH;
+            bool m_is_piggyback = false;
     };
 }
 

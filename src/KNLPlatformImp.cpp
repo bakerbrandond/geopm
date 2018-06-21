@@ -49,6 +49,41 @@ namespace geopm
         return 0x657;
     }
 
+    KNLPlatformImp::KNLPlatformImp(std::vector<int> &cpu_file_desc)
+        : PlatformImp(cpu_file_desc, 2, 5, 50.0, &(knl_msr_map()))
+        , m_throttle_limit_mhz(0.5)
+        , m_energy_units(1.0)
+        , m_power_units_inv(1.0)
+        , m_dram_energy_units(1.5258789063E-5)
+        , m_min_pkg_watts(1)
+        , m_max_pkg_watts(100)
+        , m_min_dram_watts(1)
+        , m_max_dram_watts(100)
+        , m_signal_msr_offset(M_L2_MISSES)
+        , m_control_msr_pair(M_NUM_CONTROL)
+        , m_pkg_power_limit_static(0)
+        , M_BOX_FRZ_EN(0x1 << 16)
+        , M_BOX_FRZ(0x1 << 8)
+        , M_CTR_EN(0x1 << 22)
+        , M_RST_CTRS(0x1 << 1)
+        , M_L2_FILTER_MASK(0x7 << 18)
+        , M_L2_REQ_MISS_EV_SEL(0x2e)
+        , M_L2_REQ_MISS_UMASK(0x41 << 8)
+        , M_L2_PREFETCH_EV_SEL(0x3e)
+        , M_L2_PREFETCH_UMASK(0x04 << 8)
+        , M_EVENT_SEL_0(M_L2_REQ_MISS_EV_SEL)
+        , M_UMASK_0(M_L2_REQ_MISS_UMASK)
+        , M_EVENT_SEL_1(M_L2_PREFETCH_EV_SEL)
+        , M_UMASK_1(M_L2_PREFETCH_UMASK)
+        , M_DRAM_POWER_LIMIT_MASK(0x18000)
+        , M_EXTRA_SIGNAL(1)
+        , M_PLATFORM_ID(platform_id())
+        , M_MODEL_NAME("Knights Landing")
+        , M_TRIGGER_NAME("PKG_ENERGY_STATUS")
+    {
+
+    }
+
     KNLPlatformImp::KNLPlatformImp()
         : PlatformImp(2, 5, 50.0, &(knl_msr_map()))
         , m_throttle_limit_mhz(0.5)
