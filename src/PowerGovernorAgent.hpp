@@ -118,7 +118,7 @@ namespace geopm
             int m_num_out_of_range;
             const int m_min_num_converged;
             int m_num_converged;
-
+            int m_num_pkg;
     };
 }
 

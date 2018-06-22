@@ -77,6 +77,7 @@ namespace geopm
         , m_num_out_of_range(0)
         , m_min_num_converged(15)
         , m_num_converged(0)
+        , m_num_pkg(m_platform_topo.num_domain(m_platform_io.control_domain_type("POWER_PACKAGE")))
     {
 
     }
@@ -118,8 +119,7 @@ namespace geopm
                             GEOPM_ERROR_DECIDER_UNSUPPORTED, __FILE__, __LINE__);
         }
 
-        int num_pkg_pwr_domains = m_platform_topo.num_domain(pkg_pwr_domain_type);
-        for(int i = 0; i < num_pkg_pwr_domains; ++i) {
+        for(int i = 0; i < m_num_pkg; ++i) {
             int control_idx = m_platform_io.push_control("POWER_PACKAGE", pkg_pwr_domain_type, i);
             if (control_idx < 0) {
                 throw Exception("PowerGovernorAgent::" + std::string(__func__) + "(): Failed to enable package power control"
@@ -145,7 +145,7 @@ namespace geopm
 
         bool result = false;
         double power_budget_in = policy_in[M_POLICY_POWER];
-        double num_pkg = m_control_idx.size();
+        double num_pkg = m_num_pkg;
         double per_package_budget_in = power_budget_in / num_pkg;
 
         if (per_package_budget_in > m_max_power_setting ||
