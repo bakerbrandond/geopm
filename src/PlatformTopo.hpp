@@ -47,6 +47,19 @@ namespace geopm
     class IPlatformTopo
     {
         public:
+            enum m_domain_e {
+                M_DOMAIN_INVALID = GEOPM_DOMAIN_INVALID,
+                M_DOMAIN_BOARD = GEOPM_DOMAIN_BOARD,
+                M_DOMAIN_PACKAGE = GEOPM_DOMAIN_PACKAGE,
+                M_DOMAIN_CORE = GEOPM_DOMAIN_CORE,
+                M_DOMAIN_CPU = GEOPM_DOMAIN_CPU,
+                M_DOMAIN_BOARD_MEMORY = GEOPM_DOMAIN_BOARD_MEMORY,
+                M_DOMAIN_PACKAGE_MEMORY = GEOPM_DOMAIN_PACKAGE_MEMORY,
+                M_DOMAIN_BOARD_NIC = GEOPM_DOMAIN_BOARD_NIC,
+                M_DOMAIN_PACKAGE_NIC = GEOPM_DOMAIN_PACKAGE_NIC,
+                M_DOMAIN_BOARD_ACCELERATOR = GEOPM_DOMAIN_BOARD_ACCELERATOR,
+                M_DOMAIN_PACKAGE_ACCELERATOR = GEOPM_DOMAIN_PACKAGE_ACCELERATOR,
+                M_NUM_DOMAIN = GEOPM_NUM_DOMAIN,
                 /// @brief Start of user defined collections of Linux
                 ///        logical CPUs
                 M_DOMAIN_CPU_GROUP_BEGIN = 4096,

@@ -36,7 +36,7 @@
 
 enum geopm_domain_e {
     /// @brief Reserved to represent an invalid domain
-    GEOPM_DOMAIN_INVALID,
+    GEOPM_DOMAIN_INVALID = 0,
     /// @brief All components on a user allocated compute
     ///        node (one per controller)
     GEOPM_DOMAIN_BOARD,
@@ -74,6 +74,7 @@ int geopm_topo_domain_num_cpu(int domain_type,
 
 int geopm_topo_domain_cpu(int domain_type,
                           int domain_idx,
+                          int num_cpu,
                           int *cpu_idx);
 
 int geopm_topo_domain_idx(int domain_type,

@@ -46,7 +46,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "geopm_platform_io.h"
-#include "geopm_platform_topo.h"
+#include "geopm_topo.h"
 #include "geopm_version.h"
 #include "geopm_error.h"
 #include "config.h"
@@ -81,39 +81,39 @@ int test_platform_topo()
     int num_cpu = 0;
     int cur_cpu_idx;
     int *cpu_idx = NULL;
-    bool is_within;
+    int is_within;
     const int str_len = 512;//NAME_MAX;
     char domain_name[str_len];
     int ret = 0;
     for (int inner_domain = 1; inner_domain < M_NUM_DOMAIN; ++inner_domain) {
         for (int outer_domain = M_NUM_DOMAIN - 1; outer_domain >= 0; --outer_domain) {
-            ret = geopm_platform_topo_is_domain_within(inner_domain, outer_domain, &is_within);
+            ret = geopm_topo_is_domain_within(inner_domain, outer_domain, &is_within);
             ///@todo assert proper is_within val
         }
     }
     for (domain_type = 0; domain_type < M_NUM_DOMAIN; ++domain_type) {
-        ret = geopm_platform_topo_num_domain(domain_type, &num_domain);
+        ret = geopm_topo_num_domain(domain_type, &num_domain);
         if (domain_type == 0) {
             /// assert ret != 0
             continue;
         }
         for (domain_idx = 0; domain_idx < num_domain; ++domain_idx) {
             if (!ret) {
-                ret = geopm_platform_topo_domain_cpus(domain_type, domain_idx, &num_cpu, &cpu_idx);
+                ret = geopm_topo_domain_cpu(domain_type, domain_idx, &num_cpu, &cpu_idx);
             }
             for (cur_cpu_idx = 0; cur_cpu_idx < num_cpu; ++cur_cpu_idx) {
                 if (!ret) {
-                    ret = geopm_platform_topo_domain_idx(domain_type, *(cpu_idx + cur_cpu_idx), &domain_idx2);
+                    ret = geopm_topo_domain_idx(domain_type, *(cpu_idx + cur_cpu_idx), &domain_idx2);
                     /// assert domain_idx == domain_idx2
                 }
             }
         }
         if (!ret) {
             ///@todo return str_len?
-            ret = geopm_platform_topo_domain_type_to_name(domain_type, str_len, domain_name);
+            ret = geopm_topo_domain_type_to_name(domain_type, str_len, domain_name);
         }
         if (!ret) {
-            ret = geopm_platform_topo_domain_name_to_type(strlen(domain_name), domain_name, &domain_type2);
+            ret = geopm_topo_domain_name_to_type(strlen(domain_name), domain_name, &domain_type2);
             /// assert domain_type == domain_type2
         }
 #if 0

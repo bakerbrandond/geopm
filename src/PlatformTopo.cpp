@@ -43,7 +43,7 @@
 
 extern "C"
 {
-    int geopm_platform_topo_num_domain(int domain_type, int *num_domain)
+    int geopm_topo_num_domain(int domain_type, int *num_domain)
     {
         int err = 0;
         if (NULL == num_domain) {
@@ -60,10 +60,10 @@ extern "C"
         return err;
     }
 
-    int geopm_platform_topo_domain_cpus(int domain_type, int domain_idx, int *num_cpu, int **cpu_idx)
+    int geopm_topo_domain_num_cpu(int domain_type, int domain_idx, int *num_cpu)
     {
         int err = 0;
-        if (NULL == num_cpu || NULL == cpu_idx) {
+        if (NULL == num_cpu) {
             err = -1;///@todo
         }
         if (!err) {
@@ -71,8 +71,6 @@ extern "C"
                 std::set<int> tmp_set;
                 geopm::platform_topo().domain_cpus(domain_type, domain_idx, tmp_set);
                 *num_cpu = tmp_set.size();
-                *cpu_idx = (int *) malloc(*num_cpu * sizeof(int));
-                std::copy(tmp_set.begin(), tmp_set.end(), *cpu_idx);
             }
             catch (...) {
                 err = geopm::exception_handler(std::current_exception(), true);
@@ -81,7 +79,30 @@ extern "C"
         return err;
     }
 
-    int geopm_platform_topo_domain_idx(int domain_type, int cpu_idx, int *domain_idx)
+    int geopm_topo_domain_cpu(int domain_type, int domain_idx, int num_cpu, int *cpu_idx)
+    {
+        int err = 0;
+        if (NULL == cpu_idx) {
+            err = -1;///@todo
+        }
+        if (!err) {
+            try {
+                std::set<int> tmp_set;
+                geopm::platform_topo().domain_cpus(domain_type, domain_idx, tmp_set);
+                if (tmp_set.size() > num_cpu) {
+                    throw Exception(std::string(__func__) + ": invalid num_cpu provided",
+                                    GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+                }
+                std::copy(tmp_set.begin(), tmp_set.end(), cpu_idx);
+            }
+            catch (...) {
+                err = geopm::exception_handler(std::current_exception(), true);
+            }
+        }
+        return err;
+    }
+
+    int geopm_topo_domain_idx(int domain_type, int cpu_idx, int *domain_idx)
     {
         int err = 0;
         if (NULL == domain_idx) {
@@ -98,7 +119,7 @@ extern "C"
         return err;
     }
 
-    int geopm_platform_topo_define_cpu_group(int num_cpu, const int *cpu_domain_idx, int *cpu_group_idx)
+    int geopm_topo_define_cpu_group(int num_cpu, const int *cpu_domain_idx, int *cpu_group_idx)
     {
         int err = 0;
         if (NULL == cpu_domain_idx || NULL == cpu_group_idx) {
@@ -117,7 +138,7 @@ extern "C"
         return err;
     }
 
-    int geopm_platform_topo_is_domain_within(int inner_domain, int outer_domain, bool *is_within)
+    int geopm_topo_is_domain_within(int inner_domain, int outer_domain, bool *is_within)
     {
         int err = 0;
         if (NULL == is_within) {
@@ -134,7 +155,7 @@ extern "C"
         return err;
     }
 
-    int geopm_platform_topo_domain_type_to_name(int domain_type, int str_len, char *domain_name)
+    int geopm_topo_domain_type_to_name(int domain_type, int str_len, char *domain_name)
     {
         int err = 0;
         if (NULL == domain_name) {
@@ -155,7 +176,7 @@ extern "C"
         return err;
     }
 
-    int geopm_platform_topo_domain_name_to_type(int str_len, const char *domain_name, int *domain_type)
+    int geopm_topo_domain_name_to_type(const char *domain_name, int *domain_type)
     {
         int err = 0;
         if (NULL == domain_name || NULL == domain_type) {
