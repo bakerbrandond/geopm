@@ -45,6 +45,27 @@ using geopm::IPlatformTopo;
 using testing::_;
 using testing::Return;
 
+/// Test  inputs: policy, platform signals, [tree signal]
+/// Test outputs: [policy,] platform control, tree signal
+///
+/// Agent Roles: root, mid, leaf
+///
+/// Root:
+///         Test  inputs: policy, platform signals, tree signal
+///         Test outputs: policy, platform control, tree signal (RM feedback)
+///
+/// Mid:
+///         Test  inputs: policy, platform signals, tree signal
+///         Test outputs: policy, platform control, tree signal
+///
+/// Leaf:
+///         Test  inputs: policy, platform signals
+///         Test outputs:         platform control, tree signal
+///
+/// I/O Dimensions: out of range, in range && same (no action), in range && different (action)
+///
+///
+///
 /// Tests of the power balancer algorithms in a tree with 2 levels and
 /// fan out of 2 at each level. Nodes are numbered as follows:
 ///
