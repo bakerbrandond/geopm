@@ -74,9 +74,11 @@ class PowerGovernorAgentTest : public ::testing::Test
 void PowerGovernorAgentTest::SetUp(void)
 {
     EXPECT_CALL(m_platform_io, control_domain_type("POWER_PACKAGE"))
-        .WillOnce(Return(IPlatformTopo::M_DOMAIN_PACKAGE));
+        .Times(2)   /// once for Agent, once for Governor subclass
+        .WillRepeatedly(Return(IPlatformTopo::M_DOMAIN_PACKAGE));
     EXPECT_CALL(m_platform_topo, num_domain(IPlatformTopo::M_DOMAIN_PACKAGE))
-        .WillOnce(Return(m_num_package));
+        .Times(2)   /// once for Agent, once for Governor subclass
+        .WillRepeatedly(Return(m_num_package));
     // Warning: if ENERGY_PACKAGE does not return updated values,
     // PowerGovernorAgent::wait() will loop forever.
     m_energy_package = 555.5;
@@ -105,7 +107,8 @@ void PowerGovernorAgentTest::set_up_leaf(void)
     EXPECT_CALL(m_platform_io, push_signal("POWER_PACKAGE", IPlatformTopo::M_DOMAIN_BOARD, 0))
         .WillOnce(Return(M_SIGNAL_POWER_PACKAGE));
     EXPECT_CALL(m_platform_io, push_signal("POWER_DRAM", IPlatformTopo::M_DOMAIN_BOARD, 0))
-        .WillOnce(Return(M_SIGNAL_POWER_DRAM));
+        .Times(2)   /// once for Agent, once for Governor subclass
+        .WillRepeatedly(Return(M_SIGNAL_POWER_DRAM));
 }
 
 // check if containers are equal, including NAN

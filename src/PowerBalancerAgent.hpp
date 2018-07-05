@@ -43,6 +43,7 @@ namespace geopm
     class IPlatformTopo;
     template <class type>
     class ICircularBuffer;
+    class PowerGovernor;
 
     class PowerBalancerAgent : public Agent
     {
@@ -116,10 +117,11 @@ namespace geopm
             int m_samples_per_control;
             double m_min_power_budget;
             double m_max_power_budget;
+            std::unique_ptr<PowerGovernor> m_power_gov;
+
+
 
             std::vector<int> m_pio_idx;
-
-            std::vector<int> m_control_idx;
 
             std::vector<std::function<double(const std::vector<double>&)> > m_agg_func;
 
