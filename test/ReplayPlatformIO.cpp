@@ -42,11 +42,13 @@ using testing::Return;
 using testing::Sequence;
 
 static void parse_signal_names(std::string input_str, std::string output_str, ReplayMockPlatformIO &pio);
+static void parse_control_names(std::string input_str, std::string output_str, ReplayMockPlatformIO &pio);
 static void parse_push_signal_line(std::string input_str, std::string output_str, ReplayMockPlatformIO &pio);
 
 ReplayPlatformIO::ReplayPlatformIO(const std::string &record_path)
     : m_func_map({std::make_pair("push_signal", parse_push_signal_line),
-                  std::make_pair("signal_names", parse_signal_names)})
+                  std::make_pair("signal_names", parse_signal_names,
+                  std::make_pair("control_names", parse_control_names)})
     , m_non_ret_funcs({"adjust", "write_control", "push_region_signal_total"})
     , m_pio_mock(geopm::make_unique<ReplayMockPlatformIO>())
     , m_record_file(record_path)
@@ -78,6 +80,7 @@ ReplayPlatformIO::ReplayPlatformIO(const std::string &record_path)
     }
 }
 
+/// @todo untested
 void parse_signal_names(std::string input_str, std::string output_str, ReplayMockPlatformIO &pio)
 {
     std::set<std::string> ret;
@@ -102,6 +105,41 @@ void parse_signal_names(std::string input_str, std::string output_str, ReplayMoc
         }
         std::cout << signal << ",";
         ret.insert(signal);
+        output_str = output_str.substr(del_pos + 1, std::string::npos);
+        del_pos = output_str.find(",");
+    }
+    std::cout << std::endl;
+    Sequence seq = pio.get_sequence();
+    EXPECT_CALL(pio, signal_names())
+        .InSequence(seq)
+        .WillOnce(Return(ret));
+}
+
+/// @todo untested
+void parse_control_names(std::string input_str, std::string output_str, ReplayMockPlatformIO &pio)
+{
+    std::set<std::string> ret;
+    /// find the first of the control names set
+    size_t del_pos = output_str.find("{");
+    while (del_pos != std::string::npos) {
+        std::string control = "";
+        size_t start_pos = del_pos + 1;
+        del_pos = output_str.find(",");
+        /// last control in set
+        if (del_pos == std::string::npos) {
+            del_pos = output_str.find("}");
+            if (del_pos == std::string::npos) {
+                ///ASSERT
+            }
+            else {
+            control = output_str.substr(start_pos, del_pos);
+            }
+        }
+        else {
+            control = output_str.substr(start_pos, del_pos);
+        }
+        std::cout << control << ",";
+        ret.insert(control);
         output_str = output_str.substr(del_pos + 1, std::string::npos);
         del_pos = output_str.find(",");
     }

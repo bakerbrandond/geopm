@@ -48,21 +48,18 @@ using testing::Return;
 /// Test  inputs: policy, platform signals, [tree signal]
 /// Test outputs: [policy,] platform control, tree signal
 ///
-/// Agent Roles: root, mid, leaf
+/// Agent Roles: root (root + mid + leaf), mid (mid + leaf), leaf (leaf)
 ///
 /// Root:
 ///         Test  inputs: policy, platform signals, tree signal
 ///         Test outputs: policy, platform control, tree signal (RM feedback)
 ///
-/// Mid:
-///         Test  inputs: policy, platform signals, tree signal
-///         Test outputs: policy, platform control, tree signal
-///
 /// Leaf:
 ///         Test  inputs: policy, platform signals
 ///         Test outputs:         platform control, tree signal
 ///
-/// I/O Dimensions: out of range, in range && same (no action), in range && different (action)
+/// Runtime scenarios: out of range, in range && same (no action), in range && different (action)
+///         define a function mapping power cap to performance that is quadratic (agent assumes linear, must still be able to converge after...).
 ///
 ///
 ///
@@ -77,6 +74,13 @@ using testing::Return;
 ///
 /// Different set up fixures are provided for different levels/nodes to set up
 /// expectations for platform_io.
+class RAPLMockPlatform : public IPlatformIO
+{
+    int time(int step);
+    double
+
+};
+
 class PowerBalancerAgentTest : public ::testing::Test
 {
     protected:
@@ -94,10 +98,15 @@ class PowerBalancerAgentTest : public ::testing::Test
             M_SIGNAL_POWER_DRAM,
         };
 
-        MockPlatformIO m_platform_io;
         MockPlatformTopo m_platform_topo;
-        std::unique_ptr<PowerBalancerAgent> m_agent;
-        std::vector<int> m_fan_in;
+        std::vector<MockPlatformIO> m_leaf_platform_io;
+        std::shared_ptr<PowerBalancerAgent> m_root_agent
+        std::vector<std::unique_ptr<PowerBalancerAgent> > m_mid_agent;
+        std::vector<std::unique_ptr<PowerBalancerAgent> > m_leaf_agent;
+        const int M_NUM_MID_AGENT = 2;
+        const int M_NUM_LEAF_AGENT = 4;
+        const std::vector<int> m_fan_in = {2, 2};
+
         int m_num_policy = 0;
         int m_num_sample = 0;
         int m_min_num_converged = 15;  // this is hard coded in the agent; determines how many times we need to sample
@@ -108,13 +117,19 @@ class PowerBalancerAgentTest : public ::testing::Test
 
 void PowerBalancerAgentTest::SetUp()
 {
-    m_fan_in = {2, 2};
 
     EXPECT_CALL(m_platform_io, read_signal("POWER_PACKAGE_MIN", IPlatformTopo::M_DOMAIN_PACKAGE, 0))
         .WillOnce(Return(m_min_power));
     EXPECT_CALL(m_platform_io, read_signal("POWER_PACKAGE_MAX", IPlatformTopo::M_DOMAIN_PACKAGE, 0))
         .WillOnce(Return(m_max_power));
-    m_agent = geopm::make_unique<PowerBalancerAgent>(m_platform_io, m_platform_topo);
+    m_root_agent = geopm::make_unique<PowerBalancerAgent>(m_root_platform_io, m_platform_topo);
+    for (int x = 0; x < M_NUM_MID_AGENT; ++x) {
+        m_mid_agent.push_back(geopm::make_unique<PowerBalancerAgent>(m_mid_platform_io[x], m_platform_topo));
+    }
+    for (int x = 0; x < M_NUM_LEAF_AGENT; ++x) {
+        m_leaf_platform_io.push_back(geopm::make_unique<MockPlatformIO>());/// @todo right mock constructor params
+        m_leaf_agent.push_back(geopm::make_unique<PowerBalancerAgent>(m_leaf_platform_io[x], m_platform_topo));
+    }
     m_num_policy = PowerBalancerAgent::policy_names().size();
     m_num_sample = PowerBalancerAgent::sample_names().size();
 }
@@ -396,4 +411,70 @@ TEST_F(PowerBalancerAgentTest, split_budget) {
 TEST_F(PowerBalancerAgentTest, something)
 {
     ReplayPlatformIO replayer("pio_record-mr-fusion8");
+}
+
+///      0
+///    /   \     level 1
+///   0     2
+///  / \   / \   level 0
+/// 0   1 2   3  leaf
+//const int NUM_MID_AGENT = 2;
+//const int NUM_LEAF_AGENT = 4;
+
+
+
+// use geopmbench {dgemm + stream} + GoverningAgent across 4 nodes (including mrf-8)
+// cover root, mid and leaf
+TEST_F(PowerBalancerAgentTest, test_ROLE) {
+    // tree should not use platform io
+    //EXPECT_CALL(m_platform_io, push_signal(_, _, _)).Times(0);
+    //EXPECT_CALL(m_platform_io, push_control(_, _, _)).Times(0);
+
+    m_fan_in = {3, 3};
+    m_agent->init(1, m_fan_in, true);
+
+    double t = 0.0;
+    const double delta_t = 0.005;
+    double curr_progress = mock->epoch_progress();
+    struct controller_ctx {
+        /// tree policies
+        std::vector<double> root_in_pol;
+        std::vector<std::vector<double> > root_out_pol;
+        std::vector<std::vector<double> > mid_out_pol;
+        /// tree samples
+        std::vector<double> root_out_sample;
+        std::vector<double> leaf_out_sample;
+        std::vector<double> mid_out_sample;
+        std::vector<std::vector<double> > mid_in_sample;
+        std::vector<std::vector<double> > root_in_sample;
+    };
+
+    std::vector<struct controller_ctx> ctxs(4, {.root_in_pol(1, NAN),
+                                                .root_out_pol(2, std::vector<double>(1, NAN)),
+                                                .mid_out_pol(2, std::vector<double>(1, NAN))});
+
+    while(curr_progress < 100.0) {
+        /// expect_call adjust curr_power_cap[(int)curr_progress]
+        //EXPECT_CALL(m_platform_io, ).Times();/// @todo based on inputs indexed via num_step
+        //EXPECT_CALL(m_platform_io, ).Times();/// @todo based on inputs indexed via num_step
+        //walk down
+        m_root_agent->descend(root_in_pol, root_out_pol);/// all except leaf
+        /// @todo set exp_out_pol
+        //EXPECT_EQ(exp_out_pol[0], out_pol[0]);
+        m_mid_agent[0]->descend(root_out_pol[0], mid_out_pol[0]);/// all except leaf
+        /// @todo set exp_out_pol
+        //EXPECT_EQ(exp_out_pol[0], mid_out_pol[0]);
+        m_mid_agent[1]->descend(root_out_pol[1], mid_out_pol[0]);/// all except leaf
+        /// @todo set exp_out_pol
+        //EXPECT_EQ(exp_out_pol[1], mid_out_pol[1]);
+        ///m_agent->adjust_platform(root_in_pol[0]);/// leaf level only
+        //m_agent->sample_platform(out_samp);/// leaf level only
+        //EXPECT_EQ(exp_out_samp[0], out_samp);
+        m_agent->ascend(in_samp[0], out_samp[0]);
+        EXPECT_EQ(exp_out_samp[0], out_samp[0]);
+        //walk up
+        m_agent->wait();
+        t += delta_t;
+        curr_progress = mock->epoch_progress();
+    }
 }

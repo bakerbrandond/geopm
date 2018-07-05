@@ -38,7 +38,24 @@
 
 class MockPlatformIO : public geopm::IPlatformIO
 {
+    private:
+        double m_epoch_progress;// 5.5 ==> 5 counts of epoch seen, 50% thru 6th.
+        double m_last_epoch_runtime;
+        double m_time_last_epoch_start;
+        double m_time_val;
+        double m_rate_val;
+
     public:
+        MockPlatformIO(std::vector<double> power_cap, std::vector<double> dr_dp);
+        /// update m_epoch_progress based on pol_power_cap prescribed by parent
+        /// record m_time_last_epoch_start if m_epoch_progress cross whole number boundary
+        /// also record m_last_epoch_runtime = elapsed - m_last_epoch_start_time
+        void curr_power_cap(double pol_power_cap, double elapsed);
+        /// return last epoch runtime
+        double epoch_runtime(double elapsed);
+        double epoch_progress(void) { return m_epoch_progress; }
+        double dr_dp(double power_cap);
+
         MOCK_METHOD1(register_iogroup,
                      void(std::shared_ptr<geopm::IOGroup> iogroup));
         MOCK_CONST_METHOD0(signal_names,
