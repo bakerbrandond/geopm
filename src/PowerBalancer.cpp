@@ -41,16 +41,22 @@
 namespace geopm
 {
     PowerBalancer::PowerBalancer()
-        : M_TARGET_EPSILON(0.03)
-        , M_TRIAL_DELTA(1.0)
-        , M_NUM_SAMPLE(5)
+        : PowerBalancer(0.03, 1.0, 5)
+    {
+    }
+
+    PowerBalancer::PowerBalancer(double target_epsilon, double trial_delta, int num_sample)
+        : M_TARGET_EPSILON(target_epsilon)
+        , M_TRIAL_DELTA(trial_delta)
+        , M_NUM_SAMPLE(num_sample)
         , m_power_cap(0.0)
         , m_power_limit(0.0)
         , m_target_runtime(0.0)
         , m_runtime_buffer(make_unique<CircularBuffer<double> >(M_NUM_SAMPLE))
     {
-
     }
+
+    PowerBalancer::~PowerBalancer() = default;
 
     void PowerBalancer::power_cap(double cap)
     {

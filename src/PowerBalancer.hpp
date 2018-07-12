@@ -123,9 +123,10 @@ namespace geopm
     {
         public:
             /// @brief Construct a PowerBalancer object.
+            PowerBalancer(double target_epsilon, double trial_delta, int num_sample);
             PowerBalancer();
             /// @brief Destroy a PowerBalancer object.
-            virtual ~PowerBalancer() = default;
+            virtual ~PowerBalancer();
             void power_cap(double cap) override;
             double power_cap(void) override;
             double power_limit(void) override;
