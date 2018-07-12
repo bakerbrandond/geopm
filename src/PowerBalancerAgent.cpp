@@ -47,6 +47,7 @@
 
 namespace geopm
 {
+#if 0
     PowerBalancerAgent::PowerBalancerAgent()
         : m_platform_io(platform_io())
         , m_platform_topo(platform_topo())
@@ -311,4 +312,5 @@ namespace geopm
     {
         return {"EPOCH_RUNTIME", "POWER", "IS_CONVERGED"};
     }
+#endif
 }

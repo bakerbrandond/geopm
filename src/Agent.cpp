@@ -51,10 +51,12 @@ namespace geopm
                                           MonitorAgent::make_plugin,
                                           Agent::make_dictionary(MonitorAgent::policy_names(),
                                                                  MonitorAgent::sample_names()));
+#if 0
         g_plugin_factory->register_plugin(PowerBalancerAgent::plugin_name(),
                                           PowerBalancerAgent::make_plugin,
                                           Agent::make_dictionary(PowerBalancerAgent::policy_names(),
                                                                  PowerBalancerAgent::sample_names()));
+#endif
         g_plugin_factory->register_plugin(PowerGovernorAgent::plugin_name(),
                                           PowerGovernorAgent::make_plugin,
                                           Agent::make_dictionary(PowerGovernorAgent::policy_names(),
