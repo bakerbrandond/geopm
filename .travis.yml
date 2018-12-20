@@ -52,7 +52,7 @@ install:
 script:
     - make -j
     - make -j checkprogs
-    - make check
+    - make coverage
     - ls -la **/*
     - ./copying_headers/test-dist
 
@@ -91,6 +91,7 @@ addons:
     - libopenmpi-dev
     - rpm
     - osc
+    - lcov
     - python-pip
 
 notifications:
