@@ -50,7 +50,8 @@ install:
     - CXX="g++-4.8" CC="gcc-4.8" ./configure --disable-fortran --enable-debug
 
 script:
-    - make
+    - make -j
+    - make -j checkprogs
     - make check
     - ./copying_headers/test-dist
 
