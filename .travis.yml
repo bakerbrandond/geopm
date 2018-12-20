@@ -53,7 +53,7 @@ script:
     - make -j
     - make -j checkprogs
     - make check
-    - ls -la src/*.gcno
+    - ls -la **/*
     - ./copying_headers/test-dist
 
 env:
