@@ -175,6 +175,10 @@ namespace geopm
                     cpu_idx.insert(numa_cpus.begin(), numa_cpus.end());
                 }
                 break;
+            case GEOPM_DOMAIN_PACKAGE_MEMORY:
+                if (!num_domain(GEOPM_DOMAIN_PACKAGE_MEMORY)) {
+                    break;
+                }
             case GEOPM_DOMAIN_PACKAGE:
                 for (int thread_idx = 0;
                      thread_idx != m_thread_per_core;
@@ -231,6 +235,10 @@ namespace geopm
                 case GEOPM_DOMAIN_BOARD:
                     result = 0;
                     break;
+                case GEOPM_DOMAIN_PACKAGE_MEMORY:
+                    if (!num_domain(GEOPM_DOMAIN_PACKAGE_MEMORY)) {
+                        break;
+                    }
                 case GEOPM_DOMAIN_PACKAGE:
                     core_idx = cpu_idx % (m_num_package * m_core_per_package);
                     result = core_idx / m_core_per_package;
@@ -258,7 +266,6 @@ namespace geopm
                         ++numa_idx;
                     }
                     break;
-                case GEOPM_DOMAIN_PACKAGE_MEMORY:
                 case GEOPM_DOMAIN_BOARD_NIC:
                 case GEOPM_DOMAIN_PACKAGE_NIC:
                 case GEOPM_DOMAIN_BOARD_ACCELERATOR:
