@@ -32,6 +32,7 @@
 
 #include "PCNTAgent.hpp"
 
+#include <climits>//for string_format_double
 #include <cmath>
 #include <cassert>
 #include <algorithm>
@@ -426,8 +427,16 @@ std::vector<std::string> PcntAgent::sample_names(void)
     return {"CORE FREQUENCY", "CORE PCNT", "CORE ACNT", "PCNT DELTA", "ACNT DELTA", "SCALABILITY"};
 }
 
+// todo address
+std::string string_format_double(double signal)
+{
+    char result[NAME_MAX];
+    snprintf(result, NAME_MAX, "%.16g", signal);
+    return result;
+}
+
 std::vector<std::function<std::string(double)> > PcntAgent::trace_formats(void) const
 {
-    std::vector<std::function<std::string(double)> > ret(trace_names().size(), geopm::string_format_double);
+    std::vector<std::function<std::string(double)> > ret(trace_names().size(), /*geopm::*/string_format_double);
     return ret;
 }
