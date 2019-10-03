@@ -1267,7 +1267,7 @@ class AgentConf(object):
     """
     def __init__(self, path, agent='monitor', options=dict()):
         supported_agents = {'monitor', 'power_governor', 'power_balancer', 'energy_efficient',
-                            'frequency_map'}
+                            'pcntAgent', 'frequency_map'}
         self._path = path
         if agent not in supported_agents:
             raise SyntaxError('AgentConf does not support agent type: ' + agent + '!')
@@ -1294,6 +1294,10 @@ class AgentConf(object):
         elif self._agent in ['frequency_map', 'energy_efficient']:
             policy_values[0] = self._options['frequency_min']
             policy_values[1] = self._options['frequency_max']
+        elif self._agent in ['pcntAgent']:
+            policy_values[0] = self._options['LOW_THRESHOLD']
+            policy_values[1] = self._options['HIGH_THRESHOLD']
+            policy_values[2] = self._options['START_FREQUENCY']
         with open(self._path, "w") as outfile:
             outfile.write(agent.policy_json(self._agent, policy_values))
 
