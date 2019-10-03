@@ -35,14 +35,13 @@
 #include <cmath>
 #include <cassert>
 #include <algorithm>
+#include <string>
 
-#include "PluginFactory.hpp"
-#include "PlatformIO.hpp"
-#include "PlatformTopo.hpp"
-#include "Helper.hpp"
-#include "Agg.hpp"
-
-#include <string> 
+#include "geopm/PluginFactory.hpp"
+#include "geopm/PlatformIO.hpp"
+#include "geopm/PlatformTopo.hpp"
+#include "geopm/Helper.hpp"
+#include "geopm/Agg.hpp"
 
 using geopm::Agent;
 using geopm::PlatformIO;
@@ -250,7 +249,7 @@ void PcntAgent::adjust_platform(const std::vector<double>& in_policy)
         } else {
             m_do_write_batch = false;
         }
-        
+
     }
 
 }
@@ -284,12 +283,12 @@ void PcntAgent::sample_platform(std::vector<double> &out_sample)
             if(s == M_PLAT_PC_SIGNAL_ACNT) {
                 //ANCT Delta = (acnt - prev acnt)
                 m_pc_last_signal[s][c] = m_platform_io.sample(m_pc_signal_idx[s][c]);
-                
+
                 m_pc_last_sample[M_SAMPLE_ACNT_DELTA][c] = m_pc_last_signal[s][c] - m_pc_last_sample[M_SAMPLE_ACNT][c];
                 m_pc_last_sample[M_SAMPLE_ACNT][c] = m_pc_last_signal[s][c];
-            
+
             } else if(s == M_PLAT_PC_SIGNAL_PCNT) {
-                //PCNT Delta = (pcnt - prev pcnt).  
+                //PCNT Delta = (pcnt - prev pcnt).
                 m_pc_last_signal[s][c] = m_platform_io.sample(m_pc_signal_idx[s][c]);
 
                 m_pc_last_sample[M_SAMPLE_PCNT_DELTA][c] = m_pc_last_signal[s][c] - m_pc_last_sample[M_SAMPLE_PCNT][c];
@@ -359,7 +358,7 @@ std::vector<std::string> PcntAgent::trace_names(void) const
     //return {"user_percent", "system_percent", "idle_percent",
     //        "user", "system", "idle", "nice"};
 
-    std::vector<std::string> names; 
+    std::vector<std::string> names;
     std::string freq_s, scal_s;
 
     for(int i=0; i<m_num_core; i++){
@@ -385,12 +384,12 @@ void PcntAgent::trace_values(std::vector<double> &values)
 {
     for(int i=0; i<m_num_core; i++){
         values[i] = m_pc_last_sample[M_SAMPLE_FREQ][i];
-    } 
+    }
     int c = 0;
     for(int i=m_num_core; i<m_num_core*2; i++){
         values[i] = m_pc_last_sample[M_SAMPLE_SCAL][c];
-        c++; 
-    } 
+        c++;
+    }
 }
 
 // Name used for registration with the Agent factory
