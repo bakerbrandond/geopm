@@ -78,6 +78,9 @@ PcntAgent::PcntAgent()
     , m_num_core(geopm::platform_topo().num_domain(GEOPM_DOMAIN_CORE))
     , m_num_package(geopm::platform_topo().num_domain(GEOPM_DOMAIN_PACKAGE))
     //Per core signals
+    // todo but using m_num_cpu NOT m_num_core
+    //      probably harmless just vectors larger than needed
+    //      and more reads/writes than needed
     , m_pc_signal_idx(M_NUM_PLAT_PC_SIGNAL, std::vector<int>(m_num_cpu))
     , m_pc_control_idx(M_NUM_PLAT_PC_CONTROL, std::vector<int>(m_num_cpu))
     , m_pc_last_signal(M_NUM_PLAT_PC_SIGNAL, std::vector<unsigned long long>(m_num_cpu))
