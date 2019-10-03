@@ -550,6 +550,56 @@ namespace geopm
                     "writeable": true
                 }
             }
+        },
+        "RESEARCH_PPERF": {
+            "offset": "0x64E",
+            "domain": "cpu",
+            "fields": {
+                "PCNT" : {
+                    "begin_bit": 0,
+                    "end_bit": 47,
+                    "function": "overflow",
+                    "units": "none",
+                    "scalar": 1.0,
+                    "writeable": false
+                }
+            }
+        },
+        "RESEARCH_UNCORE_PERF_STATUS": {
+            "offset": "0x621",
+            "domain": "package",
+            "fields": {
+                "CURRENT_CLM_RATIO" : {
+                    "begin_bit": 0,
+                    "end_bit": 6,
+                    "function": "scale",
+                    "units": "hertz",
+                    "scalar": 1.0,
+                    "writeable": false
+                }
+            }
+        },
+        "RESEARCH_IA32_CLOCK_MODULATION": {
+            "offset": "0x19A",
+            "domain": "cpu",
+            "fields": {
+                "DUTY_CYCLE" : {
+                    "begin_bit": 1,
+                    "end_bit": 3,
+                    "function": "overflow",
+                    "units": "none",
+                    "scalar": 1.0,
+                    "writeable": true
+                },
+                "ENABLE" : {
+                    "begin_bit": 4,
+                    "end_bit": 4,
+                    "function": "overflow",
+                    "units": "none",
+                    "scalar": 1.0,
+                    "writeable": true
+                }
+            }
         }
     }
 }
