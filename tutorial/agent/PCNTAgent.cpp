@@ -142,6 +142,15 @@ void PcntAgent::init(int level, const std::vector<int> &fan_in, bool is_level_ro
 void PcntAgent::validate_policy(std::vector<double> &in_policy) const
 {
     assert(in_policy.size() == M_NUM_POLICY);
+    if (std::isnan(in_policy[M_POLICY_LOW_THRESH])) {
+        in_policy[M_POLICY_LOW_THRESH] = 0.80;
+    }
+    if (std::isnan(in_policy[M_POLICY_HIGH_THRESH])) {
+        in_policy[M_POLICY_HIGH_THRESH] = 0.90;
+    }
+    if (std::isnan(in_policy[M_POLICY_START_FREQ])) {
+        in_policy[M_POLICY_START_FREQ] = 2000000000.000000; // todo sticker
+    }
 }
 
 // Distribute incoming policy to children
