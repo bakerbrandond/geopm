@@ -416,3 +416,9 @@ std::vector<std::string> PcntAgent::sample_names(void)
     //return {"USER_PERCENT", "SYSTEM_PERCENT", "IDLE_PERCENT", "CORE FREQUENCY", "SCALABILITY"};
     return {"CORE FREQUENCY", "CORE PCNT", "CORE ACNT", "PCNT DELTA", "ACNT DELTA", "SCALABILITY"};
 }
+
+std::vector<std::function<std::string(double)> > PcntAgent::trace_formats(void) const
+{
+    std::vector<std::function<std::string(double)> > ret(trace_names().size(), geopm::string_format_double);
+    return ret;
+}
