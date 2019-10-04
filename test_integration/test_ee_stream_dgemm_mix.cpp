@@ -59,6 +59,7 @@ int main(int argc, char **argv)
             }
         }
     }
+    is_verbose = false;
     std::unique_ptr<geopm::ModelRegionBase> short_model(geopm::model_region_factory("spin", 0.01, is_verbose));
     uint64_t short_region_id = 0;
     err = geopm_prof_region("short_region", GEOPM_REGION_HINT_UNKNOWN, &short_region_id);
