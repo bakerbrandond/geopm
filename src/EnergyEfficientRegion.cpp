@@ -92,6 +92,12 @@ namespace geopm
         }
     }
 
+    void EnergyEfficientRegionImp::update_perf_margin(double observed_perf)
+    {
+        // todo m_target need be associated with m_curr_step
+        m_target = (1.0 + m_perf_margin) * observed_perf;
+    }
+
     void EnergyEfficientRegionImp::calc_next_freq()
     {
         if (m_is_learning && !m_is_disabled) {
@@ -99,13 +105,7 @@ namespace geopm
             m_perf_sample.clear();
             if (!std::isnan(perf_max) && perf_max != 0.0) {
                 if (m_target == 0.0) {
-                    // @todo when dynamic policies for the agent are enabled setting target
-                    // needs to be moved to a function (update_perf_margin)
-                    // and reused here.
-                    // Note we will need to cache perf_max at each p-state
-                    // such that it can be used given an updated p-state
-                    // range as dictated by policy.
-                    m_target = (1.0 + m_perf_margin) * perf_max;
+                    update_perf_margin(perf_max);
                 }
                 else {
                     // Performance is in range; lower frequency

@@ -76,6 +76,7 @@ namespace geopm
             void disable(void) override;
             bool is_learning(void) const override;
         private:
+            void update_perf_margin(double observed_perf);
             const int M_MIN_PERF_SAMPLE;
             bool m_is_learning;
             uint64_t m_max_step;
