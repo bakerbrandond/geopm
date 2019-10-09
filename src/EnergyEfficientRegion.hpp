@@ -53,7 +53,8 @@ namespace geopm
             ///        to internal history for consideration in next region frequency
             ///        recommendation returned by freq().
             /// @param [in] curr_perf_metric The most recent performance metric.
-            virtual void sample(double curr_perf_metric) = 0;
+            /// @param [in] curr_scal_metric The most recent scalability metric.
+            virtual void sample(double curr_perf_metric, double curr_scal_metric) = 0;
             virtual void update_exit(double curr_perf_metric) = 0;
             /// @brief Consumes and clears internal sample history and uses the data
             //         to update the frequency returned by subsequent calls to freq().
@@ -66,18 +67,21 @@ namespace geopm
     {
         public:
             EnergyEfficientRegionImp(double freq_min, double freq_max,
-                                     double freq_step, double perf_margin);
+                                     double freq_step, double perf_margin,
+                                     double low_threshold, double high_threshold);
             virtual ~EnergyEfficientRegionImp() = default;
             double freq(void) const override;
             void update_freq_range(double freq_min, double freq_max, double freq_step) override;
-            void sample(double curr_perf_metric) override;
+            void sample(double curr_perf_metric, double curr_scal_metric) override;
             void update_exit(double curr_perf_metric) override;
             void calc_next_freq() override;
             void disable(void) override;
             bool is_learning(void) const override;
         private:
-            void update_perf_margin(double observed_perf);
+            void update_perf_margin(double observed_perf, double observed_scal);
             const int M_MIN_PERF_SAMPLE;
+            const double M_LOW_THRESHOLD;
+            const double M_HIGH_THRESHOLD;
             bool m_is_learning;
             uint64_t m_max_step;
             double m_freq_step;
@@ -88,6 +92,8 @@ namespace geopm
             std::vector<double> m_perf_sample;
             bool m_is_disabled;
             double m_perf_margin;
+            std::vector<double> m_scal_sample;
+            double m_last_scal;
     };
 
 } // namespace geopm

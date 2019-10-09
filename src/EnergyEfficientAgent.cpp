@@ -239,9 +239,10 @@ namespace geopm
                     auto current_region_it = m_region_map[ctl_idx].emplace(std::piecewise_construct,
                                                                            std::forward_as_tuple(current_region_info.hash),
                                                                            std::forward_as_tuple(std::make_shared<EnergyEfficientRegionImp>
-                                                                                                 (freq_min, freq_max, freq_step, m_perf_margin))).first;
+                                                                                                 (freq_min, freq_max, freq_step, m_perf_margin,
+                                                                                                  NAN, NAN))).first;
                     // Higher is better for performance, so negate
-                    current_region_it->second->sample(-1.0 * current_region_info.runtime);
+                    current_region_it->second->sample(-1.0 * current_region_info.runtime, NAN);
                 }
                 /// update previous region (exit)
                 struct m_region_info_s last_region_info = m_last_region_info[ctl_idx];

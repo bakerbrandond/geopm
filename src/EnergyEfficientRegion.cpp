@@ -47,8 +47,11 @@ namespace geopm
     }
 
     EnergyEfficientRegionImp::EnergyEfficientRegionImp(double freq_min, double freq_max,
-                                                       double freq_step, double perf_margin)
+                                                       double freq_step, double perf_margin,
+                                                       double low_threshold, double high_threshold)
         : M_MIN_PERF_SAMPLE(5)
+        , M_LOW_THRESHOLD(low_threshold) // assign in ctor body checking for null when hacky null behavior is to be removed
+        , M_HIGH_THRESHOLD(high_threshold) // assign in ctor body checking for null when hacky null behavior is to be removed
         , m_is_learning(true)
         , m_max_step(calc_num_step(freq_min, freq_max, freq_step) - 1)
         , m_freq_step(freq_step)
@@ -85,17 +88,23 @@ namespace geopm
         return m_freq_min + (m_curr_step * m_freq_step);
     }
 
-    void EnergyEfficientRegionImp::sample(double curr_perf_metric)
+    void EnergyEfficientRegionImp::sample(double curr_perf_metric, double curr_scal_metric)
     {
         if (!std::isnan(curr_perf_metric) && curr_perf_metric != 0.0) {
             m_perf_sample.push_back(curr_perf_metric);
         }
+        if (!std::isnan(curr_scal_metric)) {
+            m_scal_sample.push_back(curr_scal_metric);
+        }
     }
 
-    void EnergyEfficientRegionImp::update_perf_margin(double observed_perf)
+    // todo update api name, updating more than perf margin now
+    void EnergyEfficientRegionImp::update_perf_margin(double observed_perf, double observed_scal)
     {
+        // todo don't take parameters and Agg and clear vectors here
         // todo m_target need be associated with m_curr_step
         m_target = (1.0 + m_perf_margin) * observed_perf;
+        m_last_scal = observed_scal;
     }
 
     void EnergyEfficientRegionImp::calc_next_freq()
@@ -103,9 +112,11 @@ namespace geopm
         if (m_is_learning && !m_is_disabled) {
             double perf_max = Agg::max(m_perf_sample);
             m_perf_sample.clear();
+            double scal_med = Agg::median(m_scal_sample);
+            m_scal_sample.clear();
             if (!std::isnan(perf_max) && perf_max != 0.0) {
                 if (m_target == 0.0) {
-                    update_perf_margin(perf_max);
+                    update_perf_margin(perf_max, scal_med);
                 }
                 else {
                     // Performance is in range; lower frequency
