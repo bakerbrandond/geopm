@@ -90,6 +90,9 @@ namespace geopm
 
     void EnergyEfficientRegionImp::sample(double curr_perf_metric, double curr_scal_metric)
     {
+        // todo should we collapse these if statements such that the vectors
+        // grow at the same time?  not important since they are Agg'd independently
+        // but what does it mean to have recieved one but not the other?
         if (!std::isnan(curr_perf_metric) && curr_perf_metric != 0.0) {
             m_perf_sample.push_back(curr_perf_metric);
         }
@@ -104,6 +107,8 @@ namespace geopm
         // todo don't take parameters and Agg and clear vectors here
         // todo m_target need be associated with m_curr_step
         m_target = (1.0 + m_perf_margin) * observed_perf;
+        // todo if observed_scal and m_last_scal differ by greater than some
+        // arbitrary yet to be set threshold... we probably want to do something
         m_last_scal = observed_scal;
     }
 
@@ -119,6 +124,10 @@ namespace geopm
                     update_perf_margin(perf_max, scal_med);
                 }
                 else {
+                    // todo if m_last_scal >= HIGH_THRESHOLD do not lower freq
+                    // i.e m_curr_step = m_max_step and m_is_learning = false;
+                    // else if m_last_scal < LOW_THRESHOLD ??? anything special?
+                    // else legacy behavior
                     // Performance is in range; lower frequency
                     if (perf_max > m_target) {
                         if (m_curr_step - 1 >= 0) {
