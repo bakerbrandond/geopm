@@ -120,6 +120,14 @@ namespace geopm
         }
 #endif
         m_perf_margin = in_policy[M_POLICY_PERF_MARGIN];
+#if 0
+        if (std::isnan(in_policy[M_POLICY_LOW_THRESH])) {
+            in_policy[M_POLICY_LOW_THRESH] = 0.80;
+        }
+        if (std::isnan(in_policy[M_POLICY_HIGH_THRESH])) {
+            in_policy[M_POLICY_HIGH_THRESH] = 0.90;
+        }
+#endif
         // @todo: to support dynamic policies, policy values need to be passed to regions
         return m_freq_governor->set_frequency_bounds(in_policy[M_POLICY_FREQ_MIN],
                                                      in_policy[M_POLICY_FREQ_MAX]);
@@ -228,6 +236,14 @@ namespace geopm
                 .hint = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HINT][ctl_idx]),
                 .runtime = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_RUNTIME][ctl_idx]),
                 .count = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_COUNT][ctl_idx])};
+            if (!std::isnan(m_low_threshold) && !std::isnan(m_high_threshold)) { // todo remove when prodution ready
+                current_region_info
+                 .scalability =  m_platform_io
+                                  .sample(m_signal_idx[M_SIGNAL_NORMALIZED_SCALABILITY][ctl_idx]);
+            }
+            else {
+                current_region_info.scalability =  NAN;
+            }
             // If region hash has changed, or region count changed for the same region
             // update current region (entry)
             if (m_last_region_info[ctl_idx].hash != current_region_info.hash ||
@@ -240,9 +256,10 @@ namespace geopm
                                                                            std::forward_as_tuple(current_region_info.hash),
                                                                            std::forward_as_tuple(std::make_shared<EnergyEfficientRegionImp>
                                                                                                  (freq_min, freq_max, freq_step, m_perf_margin,
-                                                                                                  NAN, NAN))).first;
+                                                                                                  m_low_threshold, m_high_threshold))).first;
                     // Higher is better for performance, so negate
-                    current_region_it->second->sample(-1.0 * current_region_info.runtime, NAN);
+                    current_region_it->second->sample(-1.0 * current_region_info.runtime,
+                                                      current_region_info.scalability);
                 }
                 /// update previous region (exit)
                 struct m_region_info_s last_region_info = m_last_region_info[ctl_idx];
@@ -347,6 +364,7 @@ namespace geopm
 
     std::vector<std::string> EnergyEfficientAgent::trace_names(void) const
     {
+        // todo trace scalability
         return {};
     }
 
@@ -379,6 +397,9 @@ namespace geopm
         m_last_region_info = std::vector<struct m_region_info_s>(m_num_freq_ctl_domain, DEFAULT_REGION);
         m_target_freq.resize(m_num_freq_ctl_domain, m_freq_governor->get_frequency_max());
         std::vector<std::string> signal_names = {"REGION_HASH", "REGION_HINT", "REGION_RUNTIME", "REGION_COUNT"};
+        if (!std::isnan(m_low_threshold) && !std::isnan(m_high_threshold)) { // todo remove when prodution ready
+            signal_names.push_back("NORMALIZED_SCALABILITY");
+        }
 
         for (size_t sig_idx = 0; sig_idx < signal_names.size(); ++sig_idx) {
             m_signal_idx.push_back(std::vector<int>());

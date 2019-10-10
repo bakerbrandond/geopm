@@ -91,6 +91,8 @@ namespace geopm
                 M_POLICY_FREQ_MIN,
                 M_POLICY_FREQ_MAX,
                 M_POLICY_PERF_MARGIN,
+                M_POLICY_LOW_THRESHOLD,
+                M_POLICY_HIGH_THRESHOLD,
                 M_NUM_POLICY,
             };
 
@@ -99,6 +101,7 @@ namespace geopm
                 M_SIGNAL_REGION_HINT,
                 M_SIGNAL_REGION_RUNTIME,
                 M_SIGNAL_REGION_COUNT,
+                M_SIGNAL_NORMALIZED_SCALABILITY,
                 M_NUM_SIGNAL,
             };
 
@@ -107,6 +110,7 @@ namespace geopm
                 uint64_t hint;
                 double runtime;
                 uint64_t count;
+                double scalability;
             };
 
             const int M_PRECISION;
@@ -131,6 +135,8 @@ namespace geopm
             int m_num_children;
             bool m_do_send_policy;
             double m_perf_margin;
+            double m_low_threshold;
+            double m_high_threshold;
     };
 }
 
