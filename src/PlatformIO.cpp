@@ -138,7 +138,8 @@ namespace geopm
         /// These depend on ENERGY signals and should not be available
         /// if ENERGY_PACKAGE and ENERGY_DRAM are not available.
         std::set<std::string> result {"POWER_PACKAGE", "POWER_DRAM",
-                                      "TEMPERATURE_CORE", "TEMPERATURE_PACKAGE"};
+                                      "TEMPERATURE_CORE", "TEMPERATURE_PACKAGE",
+                                      "NORMALIZED_SCALABILITY"};
         for (const auto &io_group : m_iogroup_list) {
             auto names = io_group->signal_names();
             result.insert(names.begin(), names.end());
@@ -182,6 +183,18 @@ namespace geopm
             if (signal_name == "TEMPERATURE_PACKAGE") {
                 result = signal_domain_type("TEMPERATURE_PKG_UNDER");
                 is_found = true;
+            }
+            if (signal_name == "NORMALIZED_SCALABILITY") {
+                int pcnt_domain = signal_domain_type("MSR::RESEARCH_PPERF:PCNT");
+                int acnt_domain = signal_domain_type("MSR::APERF:ACNT");
+                if (pcnt_domain == acnt_domain) {
+                    result = pcnt_domain;
+                    is_found = true;
+                }
+                else {
+                    throw Exception("PlatformIOImp::signal_domain_type(): PCNT/ACNT domain mismatch. ",
+                                    GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+                }
             }
         }
         if (!is_found) {
@@ -253,6 +266,10 @@ namespace geopm
             result = push_signal_temperature(signal_name, domain_type, domain_idx);
             m_existing_signal[sig_tup] = result;
         }
+        if (result == -1 && signal_name.find("NORMALIZED_SCALABILITY") != std::string::npos) {
+            result = push_signal_scalability(signal_name, domain_type, domain_idx);
+            m_existing_signal[sig_tup] = result;
+        }
         if (result == -1) {
             throw Exception("PlatformIOImp::push_signal(): no support for signal name \"" +
                             signal_name + "\" and domain type \"" +
@@ -315,6 +332,54 @@ namespace geopm
                                                  }
 #endif
                                                  return val[0] - val[1];
+                                             } )));
+
+            m_active_signal.emplace_back(nullptr, result);
+        }
+        return result;
+    }
+
+    int PlatformIOImp::push_signal_scalability(const std::string &signal_name,
+                                               int domain_type,
+                                               int domain_idx)
+    {
+        int result = -1;
+        if (signal_name == "NORMALIZED_SCALABILITY") {
+            int time_idx = push_signal("TIME", GEOPM_DOMAIN_BOARD, 0);
+            std::vector<int> xcnt_idx;
+            xcnt_idx.push_back(push_signal("MSR::RESEARCH_PPERF:PCNT", domain_type, domain_idx));    // 0 PCNT
+            xcnt_idx.push_back(push_signal("MSR::APERF:ACNT", domain_type, domain_idx));             // 1 ACNT
+            std::vector<int> dxcnt_dt_idx;
+            for (const auto &idx : xcnt_idx) {
+                int curr_dxcnt_dt_idx = m_active_signal.size();
+
+                register_combined_signal(curr_dxcnt_dt_idx,
+                                         {time_idx, idx},
+                                         std::unique_ptr<CombinedSignal>(new DerivativeCombinedSignal));
+                // legacy PCNTAgent signal
+                //register_combined_signal(curr_dxcnt_dt_idx,
+                                         //{idx},
+                                         //std::unique_ptr<CombinedSignal>(new DeltaCombinedSignal));
+
+                m_active_signal.emplace_back(nullptr, curr_dxcnt_dt_idx);
+                dxcnt_dt_idx.push_back(curr_dxcnt_dt_idx);
+            }
+            result = m_active_signal.size();
+            register_combined_signal(result,
+                                     {dxcnt_dt_idx[0],  // 0 D(PCNT)_DT
+                                      dxcnt_dt_idx[1]}, // 1 D(ACNT)_DT
+                                     std::unique_ptr<CombinedSignal>(
+                                         new CombinedSignal(
+                                             [] (const std::vector<double> &val) -> double {
+#ifdef GEOPM_DEBUG
+                                                 if (val.size() != 2) {
+                                                     throw Exception("PlatformIOImp::push_signal_scalability(): expected two values to calculate scalability.",
+                                                                     GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
+                                                 }
+#endif
+                                                 // todo do we care about is_nan?
+                                                 // PCNT / ACNT
+                                                 return val[0] / val[1];
                                              } )));
 
             m_active_signal.emplace_back(nullptr, result);
@@ -654,6 +719,9 @@ namespace geopm
         else if (signal_name == "TEMPERATURE_PACKAGE") {
             result = string_format_double;
         }
+        else if (signal_name == "NORMALIZED_SCALABILITY") {
+            result = string_format_double;
+        }
         else {
             // PlatformIOImp forwards formatting request to underlying IOGroup
             auto iogroup = find_signal_iogroup(signal_name);
@@ -680,6 +748,9 @@ namespace geopm
         }
         else if (signal_name == "TEMPERATURE_PACKAGE") {
             return "Package temperature in degrees C";
+        }
+        else if (signal_name == "NORMALIZED_SCALABILITY") {
+            return "Normalized frequency scaling metric";
         }
         auto iogroup = find_signal_iogroup(signal_name);
         if (iogroup == nullptr) {

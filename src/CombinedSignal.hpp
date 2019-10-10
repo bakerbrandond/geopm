@@ -73,6 +73,16 @@ namespace geopm
             CircularBuffer<m_sample_s> m_history;
             int m_derivative_num_fit;
     };
+
+    class DeltaCombinedSignal : public CombinedSignal
+    {
+        public:
+            DeltaCombinedSignal();
+            virtual ~DeltaCombinedSignal() = default;
+            double sample(const std::vector<double> &values) override;
+        private:
+            double m_last_val;
+    };
 }
 
 #endif

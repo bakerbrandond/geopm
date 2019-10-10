@@ -119,6 +119,9 @@ namespace geopm
             int push_signal_temperature(const std::string &signal_name,
                                         int domain_type,
                                         int domain_idx);
+            int push_signal_scalability(const std::string &signal_name,
+                                        int domain_type,
+                                        int domain_idx);
             int push_signal_convert_domain(const std::string &signal_name,
                                            int domain_type,
                                            int domain_idx);
