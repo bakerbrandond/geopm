@@ -90,10 +90,6 @@ class PcntAgent : public geopm::Agent
             //M_SAMPLE_IDLE_PCT,
 
             M_SAMPLE_FREQ,
-            M_SAMPLE_PCNT,
-            M_SAMPLE_ACNT,
-            M_SAMPLE_PCNT_DELTA,
-            M_SAMPLE_ACNT_DELTA,
             M_SAMPLE_SCAL,
 
             M_NUM_SAMPLE
@@ -117,8 +113,7 @@ class PcntAgent : public geopm::Agent
 
         enum m_plat_pc_signal_e {
             M_PLAT_PC_SIGNAL_CORE_FREQUENCY,
-            M_PLAT_PC_SIGNAL_PCNT,
-            M_PLAT_PC_SIGNAL_ACNT,
+            M_PLAT_PC_SIGNAL_SCALABILITY,
             M_NUM_PLAT_PC_SIGNAL
         };
 
@@ -159,7 +154,6 @@ class PcntAgent : public geopm::Agent
 
 
         int m_num_cpu;
-        int m_num_core;
         int m_num_package;
 
         std::vector<std::vector<int> > m_pc_signal_idx;

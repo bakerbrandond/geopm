@@ -75,7 +75,6 @@ PcntAgent::PcntAgent()
 
     //Additions made for PCNT
     , m_num_cpu(geopm::platform_topo().num_domain(GEOPM_DOMAIN_CPU))
-    , m_num_core(geopm::platform_topo().num_domain(GEOPM_DOMAIN_CORE))
     , m_num_package(geopm::platform_topo().num_domain(GEOPM_DOMAIN_PACKAGE))
     //Per core signals
     // todo but using m_num_cpu NOT m_num_core
@@ -130,16 +129,9 @@ void PcntAgent::init(int level, const std::vector<int> &fan_in, bool is_level_ro
 
         //Replace this with using ACNT and MCNT to figure out average frequency over a period of time.  Or perf_status.  But this will work for the quick version
         m_pc_signal_idx[M_PLAT_PC_SIGNAL_CORE_FREQUENCY][i] = m_platform_io.push_signal("FREQUENCY", cpu, i);
-        m_pc_signal_idx[M_PLAT_PC_SIGNAL_PCNT][i] = m_platform_io.push_signal("MSR::RESEARCH_PPERF:PCNT", cpu, i);
-        m_pc_signal_idx[M_PLAT_PC_SIGNAL_ACNT][i] = m_platform_io.push_signal("MSR::APERF:ACNT", cpu, i);
-    }
-
-    //per core
-    for(int i=0; i<m_num_core; i++){
-        // push controls
+        m_pc_signal_idx[M_PLAT_PC_SIGNAL_SCALABILITY][i] = m_platform_io.push_signal("NORMALIZED_SCALABILITY", cpu, i);
         m_pc_control_idx[M_PLAT_PC_CONTROL_CORE_FREQUENCY][i] = m_platform_io.push_control("FREQUENCY", core, i);
     }
-
 }
 
 // Validate incoming policy and configure default policy requests.
@@ -218,7 +210,7 @@ void PcntAgent::adjust_platform(const std::vector<double>& in_policy)
     double curr_freq = -1;
     double m_freq_max = 2800000000.000000;
     double m_freq_min = 1000000000.000000;
-    for(int c=0; c<m_num_core; c++){
+    for(int c=0; c<m_num_cpu; c++){
         scalability = m_pc_last_sample[M_SAMPLE_SCAL][c];
         curr_freq = m_pc_last_sample[M_SAMPLE_FREQ][c];
 
@@ -290,38 +282,11 @@ void PcntAgent::sample_platform(std::vector<double> &out_sample)
         }
     }
 
-    // Update samples
-    for(int s=0; s<M_NUM_PLAT_PC_SIGNAL; s++){
-        for(int c=0; c<m_num_cpu; c++){
-            if(s == M_PLAT_PC_SIGNAL_ACNT) {
-                //ANCT Delta = (acnt - prev acnt)
-                m_pc_last_signal[s][c] = m_platform_io.sample(m_pc_signal_idx[s][c]);
-
-                m_pc_last_sample[M_SAMPLE_ACNT_DELTA][c] = m_pc_last_signal[s][c] - m_pc_last_sample[M_SAMPLE_ACNT][c];
-                m_pc_last_sample[M_SAMPLE_ACNT][c] = m_pc_last_signal[s][c];
-
-            } else if(s == M_PLAT_PC_SIGNAL_PCNT) {
-                //PCNT Delta = (pcnt - prev pcnt).
-                m_pc_last_signal[s][c] = m_platform_io.sample(m_pc_signal_idx[s][c]);
-
-                m_pc_last_sample[M_SAMPLE_PCNT_DELTA][c] = m_pc_last_signal[s][c] - m_pc_last_sample[M_SAMPLE_PCNT][c];
-                m_pc_last_sample[M_SAMPLE_PCNT][c] = m_pc_last_signal[s][c];
-            } else {
-                m_pc_last_sample[M_SAMPLE_FREQ][c] = m_platform_io.sample(m_pc_signal_idx[s][c]);
-            }
-        }
-    }
-
     unsigned long long acnt;
     unsigned long long pcnt;
     for(int c=0; c<m_num_cpu; c++){
-        //acnt = m_pc_last_signal[M_PLAT_PC_SIGNAL_ACNT][c]; //m_platform_io.sample(m_pc_signal_idx[M_PLAT_PC_SIGNAL_ACNT][c]);
-        //pcnt = m_pc_last_signal[M_PLAT_PC_SIGNAL_PCNT][c]; //m_platform_io.sample(m_pc_signal_idx[M_PLAT_PC_SIGNAL_PCNT][c]);
-
-        acnt = m_pc_last_sample[M_SAMPLE_ACNT_DELTA][c]; //m_platf(rm_io.sample(m_pc_signal_idx[M_PLAT_PC_SIGNAL_ACNT][c]);
-        pcnt = m_pc_last_sample[M_SAMPLE_PCNT_DELTA][c]; //m_platform_io.sample(m_pc_signal_idx[M_PLAT_PC_SIGNAL_PCNT][c]);
-
-        m_pc_last_sample[M_SAMPLE_SCAL][c] = (double)pcnt/(double)acnt;
+        m_pc_last_sample[M_SAMPLE_SCAL][c] = m_platform_io.sample(m_pc_signal_idx[M_PLAT_PC_SIGNAL_SCALABILITY][c]);
+        m_pc_last_sample[M_SAMPLE_FREQ][c] = m_platform_io.sample(m_pc_signal_idx[M_PLAT_PC_SIGNAL_CORE_FREQUENCY][c]);
 
         // Update min and max for the report
         if (std::isnan(m_min_scal) || m_pc_last_sample[M_SAMPLE_SCAL][c] < m_min_scal) {
@@ -374,13 +339,13 @@ std::vector<std::string> PcntAgent::trace_names(void) const
     std::vector<std::string> names;
     std::string freq_s, scal_s;
 
-    for(int i=0; i<m_num_core; i++){
+    for(int i=0; i<m_num_cpu; i++){
         //sprintf(freq_s, "frequency_core%d", i);
         freq_s = "FREQUENCY_CORE" + std::to_string(i);
         names.push_back(freq_s);
     }
 
-    for(int i=0; i<m_num_core; i++){
+    for(int i=0; i<m_num_cpu; i++){
         //sprintf(scal_s, "scalability_core%d", i);
         scal_s = "SCALABILITY_CORE" + std::to_string(i);
         names.push_back(scal_s);
@@ -395,11 +360,11 @@ std::vector<std::string> PcntAgent::trace_names(void) const
 // Updates the trace with values for samples and signals from this Agent
 void PcntAgent::trace_values(std::vector<double> &values)
 {
-    for(int i=0; i<m_num_core; i++){
+    for(int i=0; i<m_num_cpu; i++){
         values[i] = m_pc_last_sample[M_SAMPLE_FREQ][i];
     }
     int c = 0;
-    for(int i=m_num_core; i<m_num_core*2; i++){
+    for(int i=m_num_cpu; i<m_num_cpu*2; i++){
         values[i] = m_pc_last_sample[M_SAMPLE_SCAL][c];
         c++;
     }
@@ -427,7 +392,7 @@ std::vector<std::string> PcntAgent::policy_names(void)
 std::vector<std::string> PcntAgent::sample_names(void)
 {
     //return {"USER_PERCENT", "SYSTEM_PERCENT", "IDLE_PERCENT", "CORE FREQUENCY", "SCALABILITY"};
-    return {"CORE FREQUENCY", "CORE PCNT", "CORE ACNT", "PCNT DELTA", "ACNT DELTA", "SCALABILITY"};
+    return {"CORE FREQUENCY", "SCALABILITY"};
 }
 
 // todo address
