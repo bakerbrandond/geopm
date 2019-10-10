@@ -68,6 +68,15 @@ namespace geopm
                              GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
         }
 #endif
+#if 0
+        // todo remove when hacky null behavior is to be removed
+        if (std::isnan(low_threshold)) {
+            M_LOW_THRESHOLD = 0.80;
+        }
+        if (std::isnan(high_threshold)) {
+            M_HIGH_THRESHOLD = 0.90;
+        }
+#endif
     }
 
     void EnergyEfficientRegionImp::update_freq_range(double freq_min, double freq_max, double freq_step)
@@ -129,19 +138,29 @@ namespace geopm
                     // else if m_last_scal < LOW_THRESHOLD ??? anything special?
                     // else legacy behavior
                     // Performance is in range; lower frequency
-                    if (perf_max > m_target) {
-                        if (m_curr_step - 1 >= 0) {
-                            --m_curr_step;
+                    if (!std::isnan(M_LOW_THRESHOLD) && !std::isnan(M_HIGH_THRESHOLD) && // todo remove when prodution ready
+                        !std::isnan(scal_med) && scal_med >= M_HIGH_THRESHOLD) {
+                         m_curr_step = m_max_step;
+                         m_is_learning = false;
+                    }
+                    // todo maybe approach the perf margin from the lowest freq and work up
+                    //else if (!std::isnan(scal_med) && scal_med < M_LOW_THRESHOLD) {
+                    //}
+                    else {
+                        if (perf_max > m_target) {
+                            if (m_curr_step - 1 >= 0) {
+                                --m_curr_step;
+                            }
+                            else {
+                                // stop learning at min frequency
+                                m_is_learning = false;
+                            }
                         }
-                        else {
-                            // stop learning at min frequency
+                        // increase frequency and stop learning when perf degrades
+                        else if ((uint64_t) m_curr_step + 1 <= m_max_step) {
+                            m_curr_step++;
                             m_is_learning = false;
                         }
-                    }
-                    // increase frequency and stop learning when perf degrades
-                    else if ((uint64_t) m_curr_step + 1 <= m_max_step) {
-                        m_curr_step++;
-                        m_is_learning = false;
                     }
                 }
             }
