@@ -84,6 +84,7 @@ namespace geopm
         , m_num_children(0)
         , m_do_send_policy(false)
         , m_perf_margin(M_POLICY_PERF_MARGIN_DEFAULT)
+        , m_scal_wait(GEOPM_TIME_REF)
     {
 
     }
@@ -258,8 +259,16 @@ namespace geopm
                                                                                                  (freq_min, freq_max, freq_step, m_perf_margin,
                                                                                                   m_low_threshold, m_high_threshold))).first;
                     // Higher is better for performance, so negate
-                    current_region_it->second->sample(-1.0 * current_region_info.runtime,
-                                                      current_region_info.scalability);
+                    double perf_metric = -1.0 * current_region_info.runtime;
+                    double scal_metric = NAN;
+                    // Gate scalability metric sampling by 50ms
+                    if (geopm_time_since(&m_scal_wait) < M_WAIT_SEC * 10) {
+                        scal_metric = current_region_info.scalability;
+                        if (ctl_idx == m_num_freq_ctl_domain - 1) {
+                            geopm_time(&m_scal_wait);
+                        }
+                    }
+                    current_region_it->second->sample(perf_metric, scal_metric);
                 }
                 /// update previous region (exit)
                 struct m_region_info_s last_region_info = m_last_region_info[ctl_idx];
