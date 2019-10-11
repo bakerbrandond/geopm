@@ -89,6 +89,7 @@ PcntAgent::PcntAgent()
     , m_pp_control_idx(M_NUM_PLAT_PP_CONTROL, std::vector<int>(m_num_package))
     , m_pp_last_signal(M_NUM_PLAT_PP_SIGNAL, std::vector<int>(m_num_package))
     , m_pp_last_sample(M_NUM_SAMPLE, std::vector<double>(m_num_package))
+    , m_scal_wait(GEOPM_TIME_REF)
 {
     geopm_time(&m_last_wait);
 }
@@ -286,7 +287,13 @@ void PcntAgent::sample_platform(std::vector<double> &out_sample)
     unsigned long long pcnt;
     for(int c=0; c<m_num_cpu; c++){
         m_pc_last_sample[M_SAMPLE_SCAL][c] = m_platform_io.sample(m_pc_signal_idx[M_PLAT_PC_SIGNAL_SCALABILITY][c]);
-        m_pc_last_sample[M_SAMPLE_FREQ][c] = m_platform_io.sample(m_pc_signal_idx[M_PLAT_PC_SIGNAL_CORE_FREQUENCY][c]);
+        // Gate scalability metric sampling by 50ms
+        if (geopm_time_since(&m_scal_wait) < M_WAIT_SEC * 10) {
+            m_pc_last_sample[M_SAMPLE_FREQ][c] = m_platform_io.sample(m_pc_signal_idx[M_PLAT_PC_SIGNAL_CORE_FREQUENCY][c]);
+            if (c == m_num_cpu - 1) {
+                geopm_time(&m_scal_wait);
+            }
+        }
 
         // Update min and max for the report
         if (std::isnan(m_min_scal) || m_pc_last_sample[M_SAMPLE_SCAL][c] < m_min_scal) {
