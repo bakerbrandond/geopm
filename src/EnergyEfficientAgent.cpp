@@ -311,7 +311,7 @@ namespace geopm
 
     std::vector<std::string> EnergyEfficientAgent::policy_names(void)
     {
-        return {"FREQ_MIN", "FREQ_MAX", "PERF_MARGIN"};
+        return {"FREQ_MIN", "FREQ_MAX", "PERF_MARGIN", "LOW_THRESHOLD", "HIGH_THRESHOLD"};
     }
 
     std::vector<std::string> EnergyEfficientAgent::sample_names(void)
