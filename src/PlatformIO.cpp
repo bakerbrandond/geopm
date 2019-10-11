@@ -353,13 +353,13 @@ namespace geopm
             for (const auto &idx : xcnt_idx) {
                 int curr_dxcnt_dt_idx = m_active_signal.size();
 
-                register_combined_signal(curr_dxcnt_dt_idx,
-                                         {time_idx, idx},
-                                         std::unique_ptr<CombinedSignal>(new DerivativeCombinedSignal));
-                // legacy PCNTAgent signal
                 //register_combined_signal(curr_dxcnt_dt_idx,
-                                         //{idx},
-                                         //std::unique_ptr<CombinedSignal>(new DeltaCombinedSignal));
+                                         //{time_idx, idx},
+                                         //std::unique_ptr<CombinedSignal>(new DerivativeCombinedSignal));
+                // legacy PCNTAgent signal
+                register_combined_signal(curr_dxcnt_dt_idx,
+                                         {idx},
+                                         std::unique_ptr<CombinedSignal>(new DeltaCombinedSignal));
 
                 m_active_signal.emplace_back(nullptr, curr_dxcnt_dt_idx);
                 dxcnt_dt_idx.push_back(curr_dxcnt_dt_idx);
