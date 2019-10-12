@@ -54,6 +54,17 @@ using json11::Json;
 
 namespace geopm
 {
+    static const std::string ENABLE_SCALABILITY = "GEOPM_EE_AGENT_USE_SCALABILITY";
+    static bool use_scalability()
+    {
+        bool result = false;
+        char *check_string = getenv(ENABLE_SCALABILITY.c_str());
+        if (check_string != NULL) {
+            result = true;
+        }
+        return result;
+    }
+
     EnergyEfficientAgent::EnergyEfficientAgent()
         : EnergyEfficientAgent(platform_io(), platform_topo(),
                                FrequencyGovernor::make_shared(),
@@ -121,14 +132,16 @@ namespace geopm
         }
 #endif
         m_perf_margin = in_policy[M_POLICY_PERF_MARGIN];
-#if 0
-        if (std::isnan(in_policy[M_POLICY_LOW_THRESH])) {
-            in_policy[M_POLICY_LOW_THRESH] = 0.80;
+        m_low_threshold = in_policy[M_POLICY_LOW_THRESHOLD];
+        m_high_threshold = in_policy[M_POLICY_HIGH_THRESHOLD];
+        if (use_scalability()) {
+            if (std::isnan(in_policy[M_POLICY_LOW_THRESHOLD])) {
+                m_low_threshold = 0.80;
+            }
+            if (std::isnan(in_policy[M_POLICY_HIGH_THRESHOLD])) {
+                m_high_threshold = 0.90;
+            }
         }
-        if (std::isnan(in_policy[M_POLICY_HIGH_THRESH])) {
-            in_policy[M_POLICY_HIGH_THRESH] = 0.90;
-        }
-#endif
         // @todo: to support dynamic policies, policy values need to be passed to regions
         return m_freq_governor->set_frequency_bounds(in_policy[M_POLICY_FREQ_MIN],
                                                      in_policy[M_POLICY_FREQ_MAX]);
