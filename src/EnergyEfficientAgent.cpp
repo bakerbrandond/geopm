@@ -250,7 +250,7 @@ namespace geopm
                 .hint = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HINT][ctl_idx]),
                 .runtime = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_RUNTIME][ctl_idx]),
                 .count = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_COUNT][ctl_idx])};
-            if (!std::isnan(m_low_threshold) && !std::isnan(m_high_threshold)) { // todo remove when prodution ready
+            if (use_scalability()) { // todo remove when prodution ready
                 current_region_info
                  .scalability =  m_platform_io
                                   .sample(m_signal_idx[M_SIGNAL_NORMALIZED_SCALABILITY][ctl_idx]);
