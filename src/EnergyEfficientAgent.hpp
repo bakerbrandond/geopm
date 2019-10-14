@@ -137,7 +137,6 @@ namespace geopm
             double m_perf_margin;
             double m_low_threshold;
             double m_high_threshold;
-            geopm_time_s m_scal_wait;
     };
 }
 
