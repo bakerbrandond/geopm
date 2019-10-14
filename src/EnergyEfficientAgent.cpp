@@ -410,7 +410,7 @@ namespace geopm
         m_last_region_info = std::vector<struct m_region_info_s>(m_num_freq_ctl_domain, DEFAULT_REGION);
         m_target_freq.resize(m_num_freq_ctl_domain, m_freq_governor->get_frequency_max());
         std::vector<std::string> signal_names = {"REGION_HASH", "REGION_HINT", "REGION_RUNTIME", "REGION_COUNT"};
-        if (!std::isnan(m_low_threshold) && !std::isnan(m_high_threshold)) { // todo remove when prodution ready
+        if (use_scalability()) { // todo remove when prodution ready
             signal_names.push_back("NORMALIZED_SCALABILITY");
         }
 
