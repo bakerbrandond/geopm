@@ -94,10 +94,14 @@ class TestIntegrationEEStreamDGEMMMix(unittest.TestCase):
             num_rank = 1
             min_freq = geopm_test_launcher.geopmread("CPUINFO::FREQ_MIN board 0")
             sticker_freq = geopm_test_launcher.geopmread("CPUINFO::FREQ_STICKER board 0")
+            low_threshold = 0.4
+            high_threshold = 0.8
             agent_conf = geopmpy.io.AgentConf(cls._agent_conf_path,
                                               'energy_efficient',
                                               {'frequency_min':min_freq,
-                                               'frequency_max':sticker_freq})
+                                               'frequency_max':sticker_freq,
+                                               'low_threshold':low_threshold,
+                                               'high_threshold':high_threshold})
             launcher = geopm_test_launcher.TestLauncher(AppConf(),
                                                         agent_conf,
                                                         cls._report_path,

@@ -1294,6 +1294,10 @@ class AgentConf(object):
         elif self._agent in ['frequency_map', 'energy_efficient']:
             policy_values[0] = self._options['frequency_min']
             policy_values[1] = self._options['frequency_max']
+            if self._agent == 'energy_efficient':
+                policy_values[3] = self._options['low_threshold']
+                policy_values[4] = self._options['high_threshold']
+
         elif self._agent in ['pcntAgent']:
             policy_values[0] = self._options['LOW_THRESHOLD']
             policy_values[1] = self._options['HIGH_THRESHOLD']
