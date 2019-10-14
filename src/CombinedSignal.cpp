@@ -119,7 +119,6 @@ namespace geopm
     double DeltaCombinedSignal::sample(const std::vector<double> &values)
     {
 #ifdef GEOPM_DEBUG
-        // caller is expected to pass in vector of (time, value).
         if (values.size() != 1) {
             throw Exception("DeltaCombinedSignal::sample(): expected 1 values.",
                             GEOPM_ERROR_LOGIC, __FILE__, __LINE__);
