@@ -155,10 +155,13 @@ namespace geopm
                         // inner_cpu_set intersection outter_cpu_set != {}
                         // AND
                         // inner_cpu_set is a super set of outer_cpu_set
-                        if (isec.size() != 0 &&
-                            odiff.size() == 0) {
+                        if (isec.size() != 0 && idiff.size() != 0) {
                             is_domain_within = false;
                         }
+                        //if (isec.size() != 0 &&
+                            //odiff.size() == 0) {
+                            //is_domain_within = false;
+                        //}
                         // inner_cpu_set intersection outter_cpu_set != {}
                         if (isec.size() != 0) {
                             is_isec_found = true;
