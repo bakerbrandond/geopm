@@ -169,7 +169,6 @@ class PcntAgent : public geopm::Agent
 
         double m_min_scal;
         double m_max_scal;
-        geopm_time_s m_scal_wait;
 };
 
 #endif
