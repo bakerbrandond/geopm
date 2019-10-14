@@ -54,6 +54,17 @@
 
 namespace geopm
 {
+    static const std::string ENABLE_DERIVATIVE = "GEOPM_PIO_USE_DERIVATIVE";
+    static bool use_derivative()
+    {
+        bool result = false;
+        char *check_string = getenv(ENABLE_DERIVATIVE.c_str());
+        if (check_string != NULL) {
+            result = true;
+        }
+        return result;
+    }
+
     PlatformIO &platform_io(void)
     {
         static PlatformIOImp instance;
@@ -353,13 +364,17 @@ namespace geopm
             for (const auto &idx : xcnt_idx) {
                 int curr_dxcnt_dt_idx = m_active_signal.size();
 
-                //register_combined_signal(curr_dxcnt_dt_idx,
-                                         //{time_idx, idx},
-                                         //std::unique_ptr<CombinedSignal>(new DerivativeCombinedSignal));
-                // legacy PCNTAgent signal
-                register_combined_signal(curr_dxcnt_dt_idx,
-                                         {idx},
-                                         std::unique_ptr<CombinedSignal>(new DeltaCombinedSignal));
+                if (use_derivative()) {
+                    register_combined_signal(curr_dxcnt_dt_idx,
+                                             {time_idx, idx},
+                                             std::unique_ptr<CombinedSignal>(new DerivativeCombinedSignal));
+                }
+                else {
+                    // legacy PCNTAgent signal
+                    register_combined_signal(curr_dxcnt_dt_idx,
+                                             {idx},
+                                             std::unique_ptr<CombinedSignal>(new DeltaCombinedSignal));
+                }
 
                 m_active_signal.emplace_back(nullptr, curr_dxcnt_dt_idx);
                 dxcnt_dt_idx.push_back(curr_dxcnt_dt_idx);
