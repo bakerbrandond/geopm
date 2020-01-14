@@ -381,6 +381,8 @@ test_integration/geopm_context.py
 test_integration/geopm_test_integration.py
 test_integration/geopm_test_launcher.py
 test_integration/geopm_test_loop.sh
+test_integration/test_ee_short_regions.cpp
+test_integration/test_ee_short_regions.py
 test_integration/test_ee_stream_dgemm_mix.cpp
 test_integration/test_ee_stream_dgemm_mix.py
 test_integration/test_omp_outer_loop.cpp
