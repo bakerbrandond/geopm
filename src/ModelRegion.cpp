@@ -79,6 +79,10 @@ namespace geopm
         if (name_check(name, "sleep")) {
             return geopm::make_unique<SleepModelRegion>(big_o, verbosity, do_imbalance, do_progress, do_unmarked);
         }
+        else if (name_check(name, "network_spin")) {
+            return geopm::make_unique<SpinModelRegion>(big_o, verbosity, do_imbalance, do_progress, do_unmarked,
+                                         "network_spin", GEOPM_REGION_HINT_NETWORK);
+        }
         else if (name_check(name, "spin")) {
             return geopm::make_unique<SpinModelRegion>(big_o, verbosity, do_imbalance, do_progress, do_unmarked);
         }
