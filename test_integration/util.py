@@ -36,6 +36,7 @@ import os
 import sys
 import unittest
 import subprocess
+import socket
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from test_integration import geopm_test_launcher
@@ -109,3 +110,26 @@ def skip_unless_stressng():
     except subprocess.CalledProcessError:
         return unittest.skip("Missing stress-ng.  Please install in the compute image.")
     return lambda func: func
+
+
+def get_big_o(region):
+    dgemm_bigo = 15.0
+    stream_bigo = 1.0
+    dgemm_bigo_jlse = 35.647
+    dgemm_bigo_quartz = 29.12
+    stream_bigo_jlse = 1.6225
+    stream_bigo_quartz = 1.7941
+    hostname = socket.gethostname()
+    if hostname.endswith('.alcf.anl.gov'):
+        dgemm_bigo = dgemm_bigo_jlse
+        stream_bigo = stream_bigo_jlse
+    elif hostname.startswith('mcfly'):
+        dgemm_bigo = 42.0
+        stream_bigo = 1.75
+    elif hostname.startswith('quartz'):
+        dgemm_bigo = dgemm_bigo_quartz
+        stream_bigo = stream_bigo_quartz
+    big_o = dict()
+    big_o['dgemm'] = dgemm_bigo
+    big_o['stream'] = stream_bigo
+    return big_o[region]

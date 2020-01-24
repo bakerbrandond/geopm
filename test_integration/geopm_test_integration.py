@@ -1077,22 +1077,8 @@ class TestIntegration(unittest.TestCase):
         num_node = 1
         num_rank = 4
         loop_count = 5
-        dgemm_bigo = 15.0
-        stream_bigo = 1.0
-        dgemm_bigo_jlse = 35.647
-        dgemm_bigo_quartz = 29.12
-        stream_bigo_jlse = 1.6225
-        stream_bigo_quartz = 1.7941
-        hostname = socket.gethostname()
-        if hostname.endswith('.alcf.anl.gov'):
-            dgemm_bigo = dgemm_bigo_jlse
-            stream_bigo = stream_bigo_jlse
-        elif hostname.startswith('mcfly'):
-            dgemm_bigo = 42.0
-            stream_bigo = 1.75
-        elif hostname.startswith('quartz'):
-            dgemm_bigo = dgemm_bigo_quartz
-            stream_bigo = stream_bigo_quartz
+        dgemm_bigo = util.get_big_o('dgemm')
+        stream_bigo = util.get_big_o('stream')
 
         app_conf = geopmpy.io.BenchConf(name + '_app.config')
         self._tmp_files.append(app_conf.get_path())
@@ -1194,22 +1180,8 @@ class TestIntegration(unittest.TestCase):
         num_node = 1
         num_rank = 4
         loop_count = 200
-        dgemm_bigo = 15.0
-        stream_bigo = 1.0
-        dgemm_bigo_jlse = 35.647
-        dgemm_bigo_quartz = 29.12
-        stream_bigo_jlse = 1.6225
-        stream_bigo_quartz = 1.7941
-        hostname = socket.gethostname()
-        if hostname.endswith('.alcf.anl.gov'):
-            dgemm_bigo = dgemm_bigo_jlse
-            stream_bigo = stream_bigo_jlse
-        elif hostname.startswith('mcfly'):
-            dgemm_bigo = 42.0
-            stream_bigo = 1.75
-        elif hostname.startswith('quartz'):
-            dgemm_bigo = dgemm_bigo_quartz
-            stream_bigo = stream_bigo_quartz
+        dgemm_bigo = util.get_big_o('dgemm')
+        stream_bigo = util.get_big_o('stream')
 
         run = ['_sticker', '_nan_nan']
         for rr in run:
