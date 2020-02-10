@@ -1336,6 +1336,9 @@ class TestIntegration(unittest.TestCase):
             self.assert_geopm_uses_policy(override_policy, test_name + '_override_no_user')
             self.assert_geopm_uses_policy(override_policy, test_name + '_override_with_user', user_policy=user_policy)
 
+    # todo decorate with batch, do not use test launcher for geopmread
+    # todo use ptopo python wrapper for geopmread -d
+    # todo explore ptopo based dynamic num_cpu detection
     def test_agent_energy_efficient_short_region(self):
         """
         Test that the energy_efficient agent can save energy on short-running regions.
@@ -1343,6 +1346,9 @@ class TestIntegration(unittest.TestCase):
         name = 'test_agent_energy_efficient_short_region'
         min_freq = geopm_test_launcher.geopmread("CPUINFO::FREQ_MIN board 0")
         sticker_freq = geopm_test_launcher.geopmread("CPUINFO::FREQ_STICKER board 0")
+        #domains = geopm_test_launcher.geopmread("-d")
+        # parse out number of cores and...
+        num_cpu = 2 # todo
 
         app_conf = geopmpy.io.BenchConf(name + '_app.config')
         self._tmp_files.append(app_conf.get_path())
@@ -1353,18 +1359,18 @@ class TestIntegration(unittest.TestCase):
         #  - For stream, this keeps the memory footprint small. This should
         #    stay in cache, resulting in a cpu-bound workload, where the EE
         #    agent should stay near max frequency.
-        app_conf.append_region('timed_stream', 0.002)
+        stream_region_name = 'timed_stream'
+        app_conf.append_region(stream_region_name, 0.005)
 
         # Our other short-running region should send the EE agent toward minimum
         # frequency. For this, use a spin region with a network hint.
-        app_conf.append_region('network_spin', 0.002)
+        app_conf.append_region('network_spin', 0.005)
 
-        def get_agent_output(agent):
-            self._agent = agent
-            self._options = {'FREQ_MIN': min_freq,
-                             'FREQ_MAX': sticker_freq}
-            self._options = {}
-            subtest_name = '{}_{}'.format(name, agent)
+        def get_agent_output(test_min_freq, test_max_freq):
+            self._agent = 'energy_efficient'
+            self._options = {'FREQ_MIN': test_min_freq,
+                             'FREQ_MAX': test_max_freq}
+            subtest_name = '{}_{}_{}'.format(name, test_min_freq, test_max_freq)
             report_path = subtest_name + '.report'
             trace_path = subtest_name + '.trace'
             agent_conf = geopmpy.io.AgentConf(subtest_name + '_agent.config', self._agent, self._options)
@@ -1372,25 +1378,27 @@ class TestIntegration(unittest.TestCase):
             launcher = geopm_test_launcher.TestLauncher(app_conf, agent_conf, report_path, trace_path)
             launcher.set_num_node(1)
             launcher.set_num_rank(1)
+            launcher.set_cpu_per_rank(num_cpu)
             launcher.run(subtest_name)
             self._output.append(geopmpy.io.AppOutput(report_path, trace_path + '*'))
             return self._output[-1]
 
-        ee_output = get_agent_output('energy_efficient')
-        ee_stream_df = ee_output.get_report_data(region='stream')
+        ee_output = get_agent_output(min_freq, sticker_freq)
+        ee_stream_df = ee_output.get_report_data(region=stream_region_name)
         ee_network_spin_df = ee_output.get_report_data(region='network_spin')
         ee_network_spin_energy = ee_network_spin_df.iloc[0]['energy_pkg'] + ee_network_spin_df.iloc[0]['energy_dram']
 
-        fma_output = get_agent_output('frequency_map')
-        fma_network_spin_df = fma_output.get_report_data(region='network_spin')
-        fma_network_spin_energy = fma_network_spin_df.iloc[0]['energy_pkg'] + fma_network_spin_df.iloc[0]['energy_dram']
+        baseline_output = get_agent_output(sticker_freq, sticker_freq)
+        baseline_network_spin_df = baseline_output.get_report_data(region='network_spin')
+        baseline_network_spin_energy = baseline_network_spin_df.iloc[0]['energy_pkg'] + baseline_network_spin_df.iloc[0]['energy_dram']
 
         msg = 'Save energy on the network-hinted spin region'
-        self.assertLess(ee_network_spin_energy, fma_network_spin_energy, msg=msg)
-        self.assertFar(ee_network_spin_energy, fma_network_spin_energy, msg=msg)
+        self.assertLess(ee_network_spin_energy, baseline_network_spin_energy, msg=msg)
+        # todo assert no learned freq for network_spin region as hint trumps hash
 
         # The small stream region should be compute-bound. Expect that it
         # is near the sticker frequency, since that was given as FREQ_MAX.
+        # todo assert learning complete for short stream region
         self.assertNear(ee_stream_df['frequency'].item(), 100)
 
 class TestIntegrationGeopmio(unittest.TestCase):
