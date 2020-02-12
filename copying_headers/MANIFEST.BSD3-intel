@@ -213,6 +213,8 @@ src/SampleRegulator.cpp
 src/SampleRegulator.hpp
 src/SampleScheduler.cpp
 src/SampleScheduler.hpp
+src/ScalingModelRegion.cpp
+src/ScalingModelRegion.hpp
 src/SharedMemory.cpp
 src/SharedMemory.hpp
 src/SharedMemoryImp.hpp
