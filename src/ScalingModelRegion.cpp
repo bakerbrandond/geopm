@@ -114,20 +114,24 @@ namespace geopm
         double scalar = 3.0;
 #pragma omp parallel for
         for (size_t idx = 0; idx < m_array_a.size(); ++idx) {
-            m_array_a[idx] = m_array_b[idx] + scalar * m_array_c[idx];
+            m_array_a[idx] += m_array_b[idx] + scalar * m_array_c[idx];
         }
     }
 
     void ScalingModelRegion::big_o(double big_o_in)
     {
+        m_big_o = big_o_in;
         size_t num_trial = 11;
         size_t median_idx = num_trial / 2;
         std::vector<double> atom_time(num_trial, 0.0);
         for (size_t trial_idx = 0; trial_idx < num_trial; ++trial_idx) {
             struct geopm_time_s time_0;
             geopm_time(&time_0);
-            run_atom();
-            atom_time[trial_idx] = geopm_time_since(&time_0);
+            size_t repeat = 10;
+            for (size_t it = 0; it != repeat; ++it) {
+                run_atom();
+            }
+            atom_time[trial_idx] = geopm_time_since(&time_0) / repeat;
         }
         std::sort(atom_time.begin(), atom_time.end());
         double median_atom_time = atom_time[median_idx];
@@ -138,7 +142,7 @@ namespace geopm
 
     void ScalingModelRegion::run(void)
     {
-        if (m_big_o != 0.0) {
+        if (m_array_len != 0.0) {
             if (m_verbosity) {
                 std::cout << "Executing stream triad of length " << m_array_len << " elements " << m_num_atom << " times."  << std::endl;
             }

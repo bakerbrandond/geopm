@@ -70,11 +70,11 @@ int main(int argc, char **argv)
     double freq_sticker = platform_io().read_signal("CPUINFO::FREQ_STICKER", GEOPM_DOMAIN_BOARD, 0);
     double freq_step = platform_io().read_signal("CPUINFO::FREQ_STEP", GEOPM_DOMAIN_BOARD, 0);
     int num_step = std::lround((freq_sticker - freq_min) / freq_step) + 1;
-    std::vector<uint64_t> region_id;
+    std::vector<uint64_t> region_id(num_step, 0ULL);
     double freq = freq_min;
     for (int idx = 0; idx != num_step; ++idx) {
         std::string name = "scaling_region_" + std::to_string(idx);
-        int err = geopm_prof_region(name.c_str(), GEOPM_REGION_HINT_UNKNOWN, &region_id[idx]);
+        int err = geopm_prof_region(name.c_str(), GEOPM_REGION_HINT_UNKNOWN, &(region_id[idx]));
         if (err) {
             throw geopm::Exception("test_scaling_region", err, __FILE__, __LINE__);
         }
