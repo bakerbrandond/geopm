@@ -51,7 +51,10 @@ namespace geopm
                                            bool do_progress,
                                            bool do_unmarked)
         : ModelRegion(verbosity)
-        , m_array_len((llc_size() - 320) / 8 / 3) // Array is sized to fit in LLC while leaving 5 cache lines free
+        , m_sysfs_cache_dir("/sys/devices/system/cpu/cpu0/cache")
+        , m_llc_slop_size(320) // 5 cache lines
+        , m_element_size(3 * 8)
+        , m_array_len((llc_size() - m_llc_slop_size) / m_element_size) // Array is sized to fit 3 in LLC with slop
         , m_array_a(m_array_len, 0.0)
         , m_array_b(m_array_len, 1.0)
         , m_array_c(m_array_len, 2.0)
@@ -74,7 +77,7 @@ namespace geopm
         bool do_cont = true;
         std::string contents;
         for (int cache_idx = 0; do_cont; ++cache_idx) {
-            std::ifstream fid("/sys/devices/system/cpu/cpu0/cache/index" + std::to_string(cache_idx) + "/size");
+            std::ifstream fid(m_sysfs_cache_dir + "/index" + std::to_string(cache_idx) + "/size");
             if (fid.good()) {
                 std::stringstream ss;
                 ss << fid.rdbuf();
@@ -97,6 +100,10 @@ namespace geopm
         }
         if (result == 0) {
             throw Exception("ScalingModelRegion::llc_size: Unable to parse cache size from sysfs: " + contents,
+                            GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
+        }
+        if (result <= m_llc_slop_size + 8 * m_element_size) {
+            throw Exception("ScalingModelRegion::llc_size: LLC cache size is too small: " + contents,
                             GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
         }
         return result;

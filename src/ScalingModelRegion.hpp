@@ -34,6 +34,7 @@
 #define SCALINGMODELREGION_HPP_INCLUDE
 
 #include <vector>
+#include <string>
 #include <cstdint>
 #include "ModelRegion.hpp"
 
@@ -53,6 +54,10 @@ namespace geopm
         protected:
             size_t llc_size(void);
             void run_atom(void);
+
+            std::string m_sysfs_cache_dir;
+            size_t m_llc_slop_size;
+            size_t m_element_size;
             size_t m_array_len;
             size_t m_num_atom;
             std::vector<double> m_array_a;
