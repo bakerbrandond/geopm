@@ -1355,6 +1355,8 @@ class TestIntegration(unittest.TestCase):
         self._tmp_files.append(app_conf.get_path())
         app_conf.set_loop_count(100)
 
+        scaling_region_name = 'scaling'
+        app_conf.append_region(scaling_region_name, 0.005)
         # Using a small stream size gives us the following properties:
         #  - Short-running regions
         #  - For stream, this keeps the memory footprint small. This should
@@ -1380,7 +1382,7 @@ class TestIntegration(unittest.TestCase):
             launcher = geopm_test_launcher.TestLauncher(app_conf, agent_conf, report_path)
             launcher.set_num_node(1)
             launcher.set_num_rank(1)
-            launcher.set_cpu_per_rank(num_cpu)
+            #launcher.set_cpu_per_rank(num_cpu)
             launcher.run(subtest_name)
             return geopmpy.io.RawReport(report_path)
 
@@ -1395,6 +1397,14 @@ class TestIntegration(unittest.TestCase):
             #self.assertLess(ee_app_totals['package-energy (joules)'],
                             #baseline_app_totals['package-energy (joules)'], msg=msg)
             for region_name in ee_report.region_names(host_name):
+                if region_name == scaling_region_name:
+                    ee_scaling_region = ee_report.raw_region(host_name, region_name)
+                    baseline_scaling_region = baseline_report.raw_region(host_name, region_name)
+                    self.assertTrue('requested-online-frequency' in ee_scaling_region,
+                                    msg='Learning for region {} did not complete'.format(region_name))
+                    # todo assert ee runtime not more than 10% longer than baseline
+                    # The small scaling region should be compute-bound. Expect that it
+                    # is greater than min and less than max?.
                 if region_name == stream_region_name:
                     ee_stream_region = ee_report.raw_region(host_name, region_name)
                     baseline_stream_region = baseline_report.raw_region(host_name, region_name)
