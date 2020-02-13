@@ -51,7 +51,7 @@ namespace geopm
                                            bool do_progress,
                                            bool do_unmarked)
         : ModelRegion(verbosity)
-        , m_array_len(llc_size() / 8 / 3)
+        , m_array_len((llc_size() - 320) / 8 / 3) // Array is sized to fit in LLC while leaving 5 cache lines free
         , m_array_a(m_array_len, 0.0)
         , m_array_b(m_array_len, 1.0)
         , m_array_c(m_array_len, 2.0)
