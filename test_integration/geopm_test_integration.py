@@ -1355,15 +1355,20 @@ class TestIntegration(unittest.TestCase):
         self._tmp_files.append(app_conf.get_path())
         app_conf.set_loop_count(100)
 
-        scaling_region_name = 'scaling'
-        app_conf.append_region(scaling_region_name, 0.005)
+        import numpy
+        from numpy import arange
+
+        #scales = list(arange(0.001, 0.1, 0.001))
+        for scale in arange(0.001, 0.1, 0.001):
+            scaling_region_name = 'scaling_{}'.format(scale)
+            app_conf.append_region(scaling_region_name, scale)
         # Using a small stream size gives us the following properties:
         #  - Short-running regions
         #  - For stream, this keeps the memory footprint small. This should
         #    stay in cache, resulting in a cpu-bound workload, where the EE
         #    agent should stay near max frequency.
-        stream_region_name = 'timed_stream'
-        app_conf.append_region(stream_region_name, 0.005)
+        #stream_region_name = 'timed_stream'
+        #app_conf.append_region(stream_region_name, 0.005)
 
         # Our other short-running region should send the EE agent toward minimum
         # frequency. For this, use a spin region with a network hint.
@@ -1393,9 +1398,9 @@ class TestIntegration(unittest.TestCase):
             baseline_app_totals = baseline_report.raw_totals(host_name)
             # todo application level assertion that we do not adversely affect energy
             # what is the acceptable delta?
-            #msg = 'Save energy on the total application'
-            #self.assertLess(ee_app_totals['package-energy (joules)'],
-                            #baseline_app_totals['package-energy (joules)'], msg=msg)
+            msg = 'Save energy on the total application'
+            self.assertLess(ee_app_totals['package-energy (joules)'],
+                            baseline_app_totals['package-energy (joules)'], msg=msg)
             for region_name in ee_report.region_names(host_name):
                 if region_name == scaling_region_name:
                     ee_scaling_region = ee_report.raw_region(host_name, region_name)
