@@ -43,11 +43,12 @@ namespace geopm
     class ScalingModelRegion : public ModelRegion
     {
         public:
-            ScalingModelRegion(double big_o_in,
-                              int verbosity,
-                              bool do_imbalance,
-                              bool do_progress,
-                              bool do_unmarked);
+            ScalingModelRegion(const std::string &name,
+                               double big_o_in,
+                               int verbosity,
+                               bool do_imbalance,
+                               bool do_progress,
+                               bool do_unmarked);
             virtual ~ScalingModelRegion() = default;
             void big_o(double big_o);
             void run(void);

@@ -56,7 +56,8 @@ namespace geopm
     {
         bool result = false;
         size_t key_size = key.size();
-        if (name.find(key) == 0 &&
+        if (name.rfind(key) == 0 ||
+            name.find(key) == 0 &&
             (name[key_size] == '\0' ||
              name[key_size] == '-')) {
             result = true;
@@ -105,7 +106,7 @@ namespace geopm
             return geopm::make_unique<IgnoreModelRegion>(big_o, verbosity, do_imbalance, do_progress, do_unmarked);
         }
         else if (name_check(name, "scaling")) {
-            return geopm::make_unique<ScalingModelRegion>(big_o, verbosity, do_imbalance, do_progress, do_unmarked);
+            return geopm::make_unique<ScalingModelRegion>(name, big_o, verbosity, do_imbalance, do_progress, do_unmarked);
         }
         else if (name_check(name, "barrier")) {
             return geopm::make_unique<BarrierModelRegion>(big_o, verbosity, do_imbalance, do_progress, do_unmarked);

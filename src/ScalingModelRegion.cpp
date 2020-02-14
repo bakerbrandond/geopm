@@ -45,7 +45,8 @@
 
 namespace geopm
 {
-    ScalingModelRegion::ScalingModelRegion(double big_o_in,
+    ScalingModelRegion::ScalingModelRegion(const std::string &name,
+                                           double big_o_in,
                                            int verbosity,
                                            bool do_imbalance,
                                            bool do_progress,
@@ -59,7 +60,7 @@ namespace geopm
         , m_array_b(m_array_len, 1.0)
         , m_array_c(m_array_len, 2.0)
     {
-        m_name = "scaling";
+        m_name = name;
         m_do_imbalance = do_imbalance;
         m_do_progress = do_progress;
         m_do_unmarked = do_unmarked;
