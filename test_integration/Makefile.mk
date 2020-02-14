@@ -37,6 +37,7 @@ EXTRA_DIST += test_integration/geopm_context.py \
               test_integration/__main__.py \
               test_integration/README.md \
               test_integration/test_ee_stream_dgemm_mix.py \
+              test_integration/test_ee_scaling_spin_mix.py \
               test_integration/test_omp_outer_loop.py \
               test_integration/test_profile_policy.py \
               test_integration/test_scaling_region.py \
@@ -47,6 +48,7 @@ EXTRA_DIST += test_integration/geopm_context.py \
 
 if ENABLE_MPI
 noinst_PROGRAMS += test_integration/test_ee_stream_dgemm_mix \
+                   test_integration/test_ee_scaling_spin_mix \
                    test_integration/test_omp_outer_loop \
                    test_integration/test_scaling_region \
                    # end
@@ -57,6 +59,13 @@ test_integration_test_ee_stream_dgemm_mix_SOURCES = test_integration/test_ee_str
 test_integration_test_ee_stream_dgemm_mix_LDADD = libgeopm.la $(MATH_LIB) $(MPI_CLIBS)
 test_integration_test_ee_stream_dgemm_mix_LDFLAGS = $(AM_LDFLAGS) $(MPI_CLDFLAGS) $(MATH_CLDFLAGS)
 test_integration_test_ee_stream_dgemm_mix_CXXFLAGS = $(AM_CXXFLAGS) $(MPI_CFLAGS) -D_GNU_SOURCE -std=c++11 $(MATH_CFLAGS)
+
+test_integration_test_ee_scaling_spin_mix_SOURCES = test_integration/test_ee_scaling_spin_mix.cpp \
+                                                    $(model_source_files) \
+                                                    # end
+test_integration_test_ee_scaling_spin_mix_LDADD = libgeopm.la $(MATH_LIB) $(MPI_CLIBS)
+test_integration_test_ee_scaling_spin_mix_LDFLAGS = $(AM_LDFLAGS) $(MPI_CLDFLAGS) $(MATH_CLDFLAGS)
+test_integration_test_ee_scaling_spin_mix_CXXFLAGS = $(AM_CXXFLAGS) $(MPI_CFLAGS) -D_GNU_SOURCE -std=c++11 $(MATH_CFLAGS)
 
 test_integration_test_omp_outer_loop_SOURCES = test_integration/test_omp_outer_loop.cpp \
                                                $(model_source_files) \
