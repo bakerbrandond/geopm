@@ -68,7 +68,7 @@ class AppConf(object):
 
         """
         script_dir = os.path.dirname(os.path.realpath(__file__))
-        return os.path.join(script_dir, '.libs', 'test_ee_stream_dgemm_mix')
+        return os.path.join(script_dir, '.libs', 'test_ee_scaling_spin_mix')
 
     def get_exec_args(self):
         return []
@@ -79,35 +79,54 @@ class AppConf(object):
 @util.skip_unless_run_long_tests()
 class TestIntegrationEEScalingSpinMix(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):
-        """Create launcher, execute benchmark and set up class variables.
+    def get_run_subtest_name(cls, test_min_freq, test_max_freq):
+        return '{}_{}_{}'.format(cls._test_name, test_min_freq, test_max_freq)
+    @classmethod
+    def get_run_report(cls, test_min_freq, test_max_freq):
+        cls._agent = 'energy_efficient'
+        cls._options = {'FREQ_MIN': test_min_freq,
+                         'FREQ_MAX': test_max_freq}
+        subtest_name = cls.get_run_subtest_name(test_min_freq, test_max_freq)
+        report_path = subtest_name + '.report'
+        agent_conf = geopmpy.io.AgentConf(subtest_name + '_agent.config', cls._agent, cls._options)
+        cls._tmp_files = []
+        cls._tmp_files.append(report_path)
+        cls._tmp_files.append(agent_conf.get_path())
+        launcher = geopm_test_launcher.TestLauncher(AppConf(), agent_conf, report_path)
+        launcher.set_num_node(1)
+        launcher.set_num_rank(1)
+        launcher.run(subtest_name)
+        return geopmpy.io.RawReport(report_path)
 
+    @classmethod
+    # todo decorate with batch, do not use test launcher for geopmread
+    # todo use ptopo python wrapper for geopmread -d
+    # todo explore ptopo based dynamic num_cpu detection
+    # todo need to make sure both trials land on the same host
+    def setUpClass(cls):
+        """
+        Test that the energy_efficient agent can save energy on short-running regions.
         """
         sys.stdout.write('(' + os.path.basename(__file__).split('.')[0] +
                          '.' + cls.__name__ + ') ...')
-        test_name = 'test_ee_scaling_spin_mix'
-        cls._report_path = test_name + '.report'
-        cls._trace_path = test_name + '.trace'
+        cls._test_name = 'test_ee_scaling_spin_mix'
+        cls._report_path = cls._test_name + '.report'
+        cls._trace_path = cls._test_name + '.trace'
         cls._skip_launch = _g_skip_launch
         cls._keep_files = os.getenv('GEOPM_KEEP_FILES') is not None
-        cls._agent_conf_path = test_name + '-agent-config.json'
-        if  not cls._skip_launch:
-            num_node = 2
-            num_rank = 2
-            min_freq = geopm_test_launcher.geopmread("CPUINFO::FREQ_MIN board 0")
-            sticker_freq = geopm_test_launcher.geopmread("CPUINFO::FREQ_STICKER board 0")
-            agent_conf = geopmpy.io.AgentConf(cls._agent_conf_path,
-                                              'energy_efficient',
-                                              {'frequency_min':min_freq,
-                                               'frequency_max':sticker_freq})
-            launcher = geopm_test_launcher.TestLauncher(AppConf(),
-                                                        agent_conf,
-                                                        cls._report_path,
-                                                        cls._trace_path,
-                                                        time_limit=6000)
-            launcher.set_num_node(num_node)
-            launcher.set_num_rank(num_rank)
-            launcher.run(test_name)
+        cls._agent_conf_path = cls._test_name + '-agent-config.json'
+        min_freq = geopm_test_launcher.geopmread("CPUINFO::FREQ_MIN board 0")
+        sticker_freq = geopm_test_launcher.geopmread("CPUINFO::FREQ_STICKER board 0")
+        if not cls._skip_launch:
+            cls._ee_report = cls.get_run_report(min_freq, sticker_freq)
+            cls._baseline_report = cls.get_run_report(sticker_freq, sticker_freq)
+        else:
+            subtest_name = cls.get_run_subtest_name(min_freq, sticker_freq)
+            report_path = subtest_name + '.report'
+            cls._ee_report = geopmpy.io.RawReport(report_path)
+            subtest_name = cls.get_run_subtest_name(sticker_freq, sticker_freq)
+            report_path = subtest_name + '.report'
+            cls._baseline_report = geopmpy.io.RawReport(report_path)
 
     @classmethod
     def tearDownClass(cls):
@@ -127,60 +146,28 @@ class TestIntegrationEEScalingSpinMix(unittest.TestCase):
         stream.
 
         """
-        report = geopmpy.io.RawReport(self._report_path)
-        host_names = report.host_names()
-        mix_name_re = re.compile(r'stream-[0-9]*\.[0-9]*-dgemm-[0-9]*\.[0-9]*')
-        num_re = re.compile(r'[0-9]*\.[0-9]*')
-        for host_name in report.host_names():
-            result = []
-            for region_name in report.region_names(host_name):
-                if mix_name_re.search(region_name):
-                    fracs = num_re.findall(region_name)
-                    stream_frac = float(fracs[0])
-                    dgemm_frac = float(fracs[1])
-                    region = report.raw_region(host_name, region_name)
-                    self.assertTrue('requested-online-frequency' in region,
+        for host_name in self._ee_report.host_names():
+            ee_app_totals = self._ee_report.raw_totals(host_name)
+            baseline_app_totals = self._baseline_report.raw_totals(host_name)
+            msg = 'Save energy on the total application'
+            self.assertLess(ee_app_totals['package-energy (joules)'], baseline_app_totals['package-energy (joules)'], msg=msg)
+            for region_name in self._ee_report.region_names(host_name):
+                if region_name == 'scaling':
+                    ee_scaling_region = self._ee_report.raw_region(host_name, region_name)
+                    baseline_scaling_region = self._baseline_report.raw_region(host_name, region_name)
+                    self.assertTrue('requested-online-frequency' in ee_scaling_region,
                                     msg='Learning for region {} did not complete'.format(region_name))
-                    result.append((dgemm_frac, stream_frac, region['requested-online-frequency']))
-            self.assertEqual(5, len(result))
-            result.sort()
-            last_freq = 0.0
-            for (dgemm_frac, stream_frac, freq) in result:
-                self.assertLessEqual(last_freq, freq,
-                                     msg='Chosen frequency decreased with increasing dgemm fraction')
-                last_freq = freq
-            self.assertNotEqual(result[0][2], result[-1][2],
-                                msg='Same frequency chosen for dgemm only and stream only.')
-
-    def test_skip_short_regions(self):
-        """Test that agent does not learn from short regions.
-
-        """
-        report = geopmpy.io.RawReport(self._report_path)
-        host_names = report.host_names()
-        for host_name in report.host_names():
-            found_short = False
-            for region_name in report.region_names(host_name):
-                if region_name == 'short_region':
-                    region = report.raw_region(host_name, region_name)
-                    self.assertTrue('requested-online-frequency' not in region)
-                    found_short = True
-            self.assertTrue(found_short)
-
-    def test_skip_network_regions(self):
-        """Test that agent does not learn for regions declared with the network hint.
-
-        """
-        report = geopmpy.io.RawReport(self._report_path)
-        host_names = report.host_names()
-        for host_name in report.host_names():
-            found_barrier = False
-            for region_name in report.region_names(host_name):
-                if region_name == 'MPI_Barrier':
-                    region = report.raw_region(host_name, region_name)
-                    self.assertTrue('requested-online-frequency' not in region)
-                    found_barrier = True
-            self.assertTrue(found_barrier)
+                    # todo assert ee runtime not more than 10% longer than baseline
+                    # The small scaling region should be compute-bound. Expect that it
+                    # is greater than min and less than max?.
+                if region_name == 'network_spin':
+                    ee_spin_region = self._ee_report.raw_region(host_name, region_name)
+                    baseline_spin_region = self._baseline_report.raw_region(host_name, region_name)
+                    self.assertFalse('requested-online-frequency' in ee_spin_region,
+                                     msg='Learning for region {} did not complete'.format(region_name))
+                    msg = 'Save energy on the network-hinted spin region'
+                    self.assertLess(ee_spin_region['package-energy (joules)'],
+                                    baseline_spin_region['package-energy (joules)'], msg=msg)
 
 
 if __name__ == '__main__':

@@ -68,13 +68,13 @@ int main(int argc, char **argv)
         printf("scaling-%.2f-network_spin-%.2f", scaling_big_o, net_spin_big_o);
         std::unique_ptr<geopm::ModelRegion> scaling_model(geopm::ModelRegion::model_region("scaling", scaling_big_o * mix_idx, is_verbose));
         geopm::Profile &prof = geopm::Profile::default_profile();
-        uint64_t network_spin_rid = prof->region("network_spin", GEOPM_REGION_HINT_NETWORK);
+        uint64_t network_spin_rid = prof.region("network_spin", GEOPM_REGION_HINT_NETWORK);
         std::unique_ptr<geopm::ModelRegion> net_spin_model(geopm::ModelRegion::model_region("spin", net_spin_big_o * mix_idx, is_verbose));
         for (int rep_idx = 0; rep_idx != repeat; ++rep_idx) {
             scaling_model->run();
-            prof->enter(network_spin_rid);
+            prof.enter(network_spin_rid);
             net_spin_model->run();
-            prof->exit(network_spin_rid);
+            prof.exit(network_spin_rid);
         }
         MPI_Barrier(MPI_COMM_WORLD);
     }
