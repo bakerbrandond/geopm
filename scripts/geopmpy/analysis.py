@@ -803,7 +803,7 @@ class FreqSweepAnalysis(Analysis):
 
         freqs = self._frequency_range()
 
-        agent = 'frequency_map'
+        agent = 'energy_efficient'
         for iteration in range(self._iterations):
             for freq in freqs:
                 profile_name = FreqSweepAnalysis.fixed_freq_name(self._name, freq)
