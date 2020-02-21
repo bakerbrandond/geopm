@@ -350,6 +350,7 @@ TUTORIAL_DIST = tutorial/Makefile \
                 tutorial/admin/06_setup_default_power_balancer.sh \
                 tutorial/admin/07_setup_override_energy_efficient.sh \
                 tutorial/admin/08_setup_override_power_balancer.sh \
+                tutorial/admin/agent_energy_efficient_policy_analysis.py \
                 tutorial/agent/ExampleAgent.cpp \
                 tutorial/agent/ExampleAgent.hpp \
                 tutorial/agent/README.md \
