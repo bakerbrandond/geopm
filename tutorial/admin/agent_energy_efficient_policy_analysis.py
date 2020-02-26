@@ -123,15 +123,19 @@ class EEAgentPolicyAnalysis(object):
         self._max_freq = geopmpy.launcher.geopmread("CPUINFO::FREQ_STICKER board 0")
         self._loop_count = 100
 
+        # todo create app sweep
+        #for big_o in arange(0.001, 0.1, 0.001):
+        spin_id = 0
         for region_name in ['timed_scaling']:#, 'scaling', 'spin', 'dgemm']
-            # todo create app sweep
-            #for big_o in arange(0.001, 0.1, 0.001):
+            app_conf = geopmpy.io.BenchConf('region_{}_app.config'.format(region_name))
+            app_conf.set_loop_count(self._loop_count)
             for big_o in [0.001, 0.01, 0.1, 1.0]:
-                app_conf = geopmpy.io.BenchConf('region_{}_{}_app.config'.format(region_name, big_o))
-                app_conf.append_region(region_name, big_o)
-                app_conf.write()
-                # todo create perf margin sweep analysis
-                for perf_margin in arange(0.005, 0.1, 0.01):
+                app_conf.append_region('{}_{}'.format(region_name, big_o), big_o)
+                app_conf.append_region('spin_{}'.format(++spin_id), 0.005)
+
+            app_conf.write()
+            # todo create perf margin sweep analysis
+            for perf_margin in arange(0.005, 0.1, 0.01):
                     self._profile_name = 'perf_{}_node_{}_rank_{}_tpr_{}_region_{}_{}'.format(perf_margin,
                                                  self._num_node, self._num_rank, self._cpu_per_rank,
                                                  region_name, big_o)
