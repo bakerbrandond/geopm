@@ -31,6 +31,7 @@
  */
 
 #include "config.h"
+#include "geopm.h"
 #include "TimedScalingModelRegion.hpp"
 #include "ScalingModelRegion.hpp"
 
@@ -43,7 +44,7 @@ namespace geopm
                                                      bool do_progress,
                                                      bool do_unmarked)
         : SpinModelRegion(name, big_o_in, verbosity, do_imbalance, do_progress, do_unmarked)
-        , m_scaling_model(std::make_shared<ScalingModelRegion>(1, 0, false, false, true))
+        , m_scaling_model(std::make_shared<ScalingModelRegion>("timed_scaling", GEOPM_REGION_HINT_UNKNOWN, big_o_in, do_imbalance, do_progress, do_unmarked))
     {
 
     }
