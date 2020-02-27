@@ -121,7 +121,7 @@ namespace geopm
             return geopm::make_unique<ReduceModelRegion>(name, big_o, verbosity, do_imbalance, do_progress, do_unmarked);
         }
         else if (name_check(name, "timed_scaling")) {
-            return geopm::make_unique<TimedScalingModelRegion>(big_o, verbosity, do_imbalance, do_progress, do_unmarked);
+            return geopm::make_unique<TimedScalingModelRegion>(name, big_o, verbosity, do_imbalance, do_progress, do_unmarked);
         }
         else {
             throw Exception("model_region_factory: unknown name: " + name,
