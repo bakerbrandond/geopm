@@ -51,7 +51,7 @@ namespace geopm
                                            bool do_imbalance,
                                            bool do_progress,
                                            bool do_unmarked)
-        : ModelRegion(name, GEOPM_REGION_HINT_MEMORY, verbosity)
+        : ModelRegion(name, GEOPM_REGION_HINT_UNKNOWN, verbosity)
         , m_sysfs_cache_dir("/sys/devices/system/cpu/cpu0/cache")
         , m_llc_slop_size(320) // 5 cache lines
         , m_element_size(3 * 8)
