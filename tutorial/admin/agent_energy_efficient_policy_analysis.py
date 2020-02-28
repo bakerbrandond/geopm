@@ -124,27 +124,36 @@ class EEAgentPolicyAnalysis(object):
         self._loop_count = 100
 
         # todo create app sweep
-        #for big_o in arange(0.001, 0.1, 0.001):
-        spin_id = 0
+        #spin_id = 0
         for region_name in ['timed_scaling']:#, 'scaling', 'spin', 'dgemm']
             app_conf = geopmpy.io.BenchConf('region_{}_app.config'.format(region_name))
             app_conf.set_loop_count(self._loop_count)
+            #for big_o in arange(0.001, 0.1, 0.001):
             for big_o in [0.001, 0.01, 0.1, 1.0]:
                 app_conf.append_region('{}_{}'.format(region_name, big_o), big_o)
-                app_conf.append_region('spin_{}'.format(++spin_id), 0.005)
+                #app_conf.append_region('spin_{}'.format(++spin_id), 0.005)
 
+            self._app_conf = app_conf
             app_conf.write()
+
+            self._min_freq = self._max_freq
+            self._perf_margin = 0.0
+            self._profile_name = 'perf_{}_node_{}_rank_{}_tpr_{}_region_{}'.format(self._perf_margin,
+                                         self._num_node, self._num_rank, self._cpu_per_rank,
+                                         region_name)
+            self._report_path = self._profile_name + '.report'
+            self._agent_conf = self.get_agent_energy_efficient_conf()
+            self.launch()
             # todo create perf margin sweep analysis
+            self._min_freq = geopmpy.launcher.geopmread("CPUINFO::FREQ_MIN board 0")
             for perf_margin in arange(0.005, 0.1, 0.01):
-                    self._profile_name = 'perf_{}_node_{}_rank_{}_tpr_{}_region_{}_{}'.format(perf_margin,
-                                                 self._num_node, self._num_rank, self._cpu_per_rank,
-                                                 region_name, big_o)
-                    config = {'profile_prefix': self._profile_name, 'output_dir': '.',
-                              'verbose': True, 'iterations': 4,
-                              'min_freq': self._min_freq, 'max_freq': self._max_freq}
-                    self._sweep_analysis = geopmpy.analysis.FreqSweepAnalysis(**config).launch('srun',
-                                            ['-n{}'.format(self._num_rank), '-N{}'.format(self._num_node),
-                                             '-c{}'.format(self._cpu_per_rank), 'geopmbench', app_conf.get_path()])
+                self._perf_margin = perf_margin
+                self._profile_name = 'perf_{}_node_{}_rank_{}_tpr_{}_region_{}'.format(perf_margin,
+                                             self._num_node, self._num_rank, self._cpu_per_rank,
+                                             region_name)
+                self._report_path = self._profile_name + '.report'
+                self._agent_conf = self.get_agent_energy_efficient_conf()
+                self.launch()
 
 if __name__=='__main__':
     EEAgentPolicyAnalysis().get_agent_energy_efficient_single_region_report()
