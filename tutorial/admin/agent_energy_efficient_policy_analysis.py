@@ -57,6 +57,7 @@ class EEAgentPolicyAnalysis(object):
         self._num_node = 1
         self._cpu_per_rank = 86
         self._tmp_files = []
+        self._perf_margin = None
 
     def tearDown(self):
         if sys.exc_info() == (None, None, None) and os.getenv('GEOPM_KEEP_FILES') is None:
@@ -122,13 +123,14 @@ class EEAgentPolicyAnalysis(object):
     def get_agent_energy_efficient_single_region_report(self):
         self._min_freq = geopmpy.launcher.geopmread("CPUINFO::FREQ_MIN board 0")
         self._max_freq = geopmpy.launcher.geopmread("CPUINFO::FREQ_STICKER board 0")
-        self._loop_count = 100
+        self._loop_count = 409600
 
         # todo create app sweep
         #spin_id = 0
         for region_name in ['timed_scaling']:#, 'scaling', 'spin', 'dgemm']
             #for big_o in arange(0.001, 0.1, 0.001):
-            for big_o in [0.001, 1.0, 0.01, 0.1]:
+            big_o = 1e-4
+            for num_duration in range(1, 12):
                 app_conf = geopmpy.io.BenchConf('region_{}_app.config'.format(region_name))
                 app_conf.set_loop_count(self._loop_count)
                 app_conf.append_region('{}_{}'.format(region_name, big_o), big_o)
@@ -154,6 +156,8 @@ class EEAgentPolicyAnalysis(object):
                     self._report_path = self._profile_name + '.report'
                     self._agent_conf = self.get_agent_energy_efficient_conf()
                     self.launch()
+                big_o = big_o * 2.0
+                self._loop_count = self._loop_count // 2
 
 if __name__=='__main__':
     EEAgentPolicyAnalysis().get_agent_energy_efficient_single_region_report()
