@@ -121,7 +121,7 @@ class EEAgentPolicyAnalysis(object):
         return geopmpy.io.AppOutput(self._report_path)
 
     def get_agent_energy_efficient_single_region_report(self):
-        self._min_freq = geopmpy.launcher.geopmread("CPUINFO::FREQ_MIN board 0")
+        self._min_freq = min_freq = geopmpy.launcher.geopmread("CPUINFO::FREQ_MIN board 0")
         self._max_freq = geopmpy.launcher.geopmread("CPUINFO::FREQ_STICKER board 0")
 
         # todo create app sweep
@@ -148,7 +148,7 @@ class EEAgentPolicyAnalysis(object):
                     self._agent_conf = self.get_agent_energy_efficient_conf()
                     self.launch()
                 # todo create perf margin sweep analysis
-                self._min_freq = geopmpy.launcher.geopmread("CPUINFO::FREQ_MIN board 0")
+                self._min_freq = min_freq
                 for perf_margin in arange(0.005, 0.1, 0.01):
                     self._perf_margin = perf_margin
                     for trial in range(0, 5):
