@@ -140,22 +140,24 @@ class EEAgentPolicyAnalysis(object):
                 app_conf.write()
 
                 self._min_freq = self._max_freq
-                self._profile_name = 'node_{}_rank_{}_tpr_{}_region_{}_{}'.format(
-                                             self._num_node, self._num_rank, self._cpu_per_rank,
-                                             region_name, big_o)
-                self._report_path = self._profile_name + '.report'
-                self._agent_conf = self.get_agent_energy_efficient_conf()
-                self.launch()
+                for trial in range(0, 5):
+                    self._profile_name = 'node_{}_rank_{}_tpr_{}_region_{}_{}_{}'.format(
+                                                 self._num_node, self._num_rank, self._cpu_per_rank,
+                                                 region_name, big_o, trial)
+                    self._report_path = self._profile_name + '.report'
+                    self._agent_conf = self.get_agent_energy_efficient_conf()
+                    self.launch()
                 # todo create perf margin sweep analysis
                 self._min_freq = geopmpy.launcher.geopmread("CPUINFO::FREQ_MIN board 0")
                 for perf_margin in arange(0.005, 0.1, 0.01):
                     self._perf_margin = perf_margin
-                    self._profile_name = 'perf_{}_node_{}_rank_{}_tpr_{}_region_{}_{}'.format(perf_margin,
-                                                 self._num_node, self._num_rank, self._cpu_per_rank,
-                                                 region_name, big_o)
-                    self._report_path = self._profile_name + '.report'
-                    self._agent_conf = self.get_agent_energy_efficient_conf()
-                    self.launch()
+                    for trial in range(0, 5):
+                        self._profile_name = 'perf_{}_node_{}_rank_{}_tpr_{}_region_{}_{}_{}'.format(perf_margin,
+                                                     self._num_node, self._num_rank, self._cpu_per_rank,
+                                                     region_name, big_o, trial)
+                        self._report_path = self._profile_name + '.report'
+                        self._agent_conf = self.get_agent_energy_efficient_conf()
+                        self.launch()
                 big_o = big_o * 2.0
                 self._loop_count = self._loop_count // 2
 
