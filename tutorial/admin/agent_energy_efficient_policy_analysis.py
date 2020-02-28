@@ -129,7 +129,7 @@ class EEAgentPolicyAnalysis(object):
             app_conf = geopmpy.io.BenchConf('region_{}_app.config'.format(region_name))
             app_conf.set_loop_count(self._loop_count)
             #for big_o in arange(0.001, 0.1, 0.001):
-            for big_o in [0.001, 0.01, 0.1, 1.0]:
+            for big_o in [0.001, 1.0, 0.01, 0.1]:
                 app_conf.append_region('{}_{}'.format(region_name, big_o), big_o)
                 #app_conf.append_region('spin_{}'.format(++spin_id), 0.005)
 
