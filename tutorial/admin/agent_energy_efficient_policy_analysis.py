@@ -102,8 +102,9 @@ class EEAgentPolicyAnalysis(object):
     def get_agent_energy_efficient_conf(self):
         agent = "energy_efficient"
         options = {'FREQ_MIN': self._min_freq,
-                   'FREQ_MAX': self._max_freq,
-                   'PERF_MARGIN': self._perf_margin}
+                   'FREQ_MAX': self._max_freq}
+        if self._perf_margin is not None:
+            options['PERF_MARGIN'] = self._perf_margin
         return geopmpy.io.AgentConf(self._profile_name + '_agent.config', agent, options)
 
     def _get_agent_energy_efficient_single_region_report(self):
@@ -137,8 +138,7 @@ class EEAgentPolicyAnalysis(object):
                 app_conf.write()
 
                 self._min_freq = self._max_freq
-                self._perf_margin = 0.0
-                self._profile_name = 'perf_{}_node_{}_rank_{}_tpr_{}_region_{}_{}'.format(self._perf_margin,
+                self._profile_name = 'node_{}_rank_{}_tpr_{}_region_{}_{}'.format(
                                              self._num_node, self._num_rank, self._cpu_per_rank,
                                              region_name, big_o)
                 self._report_path = self._profile_name + '.report'
