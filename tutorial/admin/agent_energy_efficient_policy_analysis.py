@@ -123,11 +123,11 @@ class EEAgentPolicyAnalysis(object):
     def get_agent_energy_efficient_single_region_report(self):
         self._min_freq = geopmpy.launcher.geopmread("CPUINFO::FREQ_MIN board 0")
         self._max_freq = geopmpy.launcher.geopmread("CPUINFO::FREQ_STICKER board 0")
-        self._loop_count = 409600
 
         # todo create app sweep
         #spin_id = 0
         for region_name in ['timed_scaling']:#, 'scaling', 'spin', 'dgemm']
+            self._loop_count = 409600
             #for big_o in arange(0.001, 0.1, 0.001):
             big_o = 1e-4
             for num_duration in range(1, 12):
