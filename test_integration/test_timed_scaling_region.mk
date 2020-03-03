@@ -35,6 +35,9 @@ if ENABLE_MPI
 noinst_PROGRAMS += test_integration/test_timed_scaling_region
 test_integration_test_timed_scaling_region_SOURCES = test_integration/test_timed_scaling_region.cpp
 test_integration_test_timed_scaling_region_SOURCES += $(model_source_files)
+if ENABLE_BETA
+   test_integration_test_timed_scaling_region_SOURCES += $(model_beta_source_files)
+endif
 test_integration_test_timed_scaling_region_LDADD = libgeopm.la $(MATH_LIB) $(MPI_CLIBS)
 test_integration_test_timed_scaling_region_LDFLAGS = $(AM_LDFLAGS) $(MPI_CLDFLAGS) $(MATH_CLDFLAGS)
 test_integration_test_timed_scaling_region_CXXFLAGS = $(AM_CXXFLAGS) $(MPI_CFLAGS) -D_GNU_SOURCE -std=c++11 $(MATH_CFLAGS)
