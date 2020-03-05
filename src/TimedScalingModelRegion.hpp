@@ -43,7 +43,8 @@ namespace geopm
     class TimedScalingModelRegion : public SpinModelRegion
     {
         public:
-            TimedScalingModelRegion(double big_o_in,
+            TimedScalingModelRegion(const std::string &name,
+                                    double big_o_in,
                                     int verbosity,
                                     bool do_imbalance,
                                     bool do_progress,

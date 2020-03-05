@@ -349,6 +349,7 @@ TUTORIAL_DIST = tutorial/Makefile \
                 tutorial/admin/06_setup_default_power_balancer.sh \
                 tutorial/admin/07_setup_override_energy_efficient.sh \
                 tutorial/admin/08_setup_override_power_balancer.sh \
+                tutorial/admin/agent_energy_efficient_policy_analysis.py \
                 tutorial/agent/ExampleAgent.cpp \
                 tutorial/agent/ExampleAgent.hpp \
                 tutorial/agent/README.md \
@@ -650,6 +651,10 @@ endif
                        # end
 endif
 
+model_beta_source_files = src/CompositeModelRegion.cpp \
+                          src/CompositeModelRegion.hpp \
+                          # end
+
 model_source_files = src/All2allModelRegion.cpp \
                      src/All2allModelRegion.hpp \
                      src/BarrierModelRegion.cpp \
@@ -682,6 +687,11 @@ if ENABLE_MPI
     geopmbench_SOURCES = $(model_source_files) \
                          src/geopmbench_main.cpp \
                          # end
+if ENABLE_BETA
+    geopmbench_SOURCES += $(model_beta_source_files)
+else
+    EXTRA_DIST += $(model_beta_source_files)
+endif
 else
     EXTRA_DIST += $(model_source_files) \
                   src/geopmbench_main.cpp \
