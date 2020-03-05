@@ -40,6 +40,7 @@ TUTORIAL_BIN = tutorial_0 \
 
 TUTORIAL_LIB = agent/libgeopmagent_example_agent.so.0.0.0 \
                iogroup/libgeopmiogroup_example_iogroup.so.0.0.0 \
+               iogroup/libgeopmiogroup_stub_iogroup.so.0.0.0 \
                plugin_load/alice/libgeopmiogroup_alice.so.0.0.0 \
                plugin_load/bob/libgeopmiogroup_bob.so.0.0.0
                # end
@@ -100,6 +101,9 @@ agent/libgeopmagent_example_agent.so.0.0.0: agent/ExampleAgent.cpp agent/Example
 
 iogroup/libgeopmiogroup_example_iogroup.so.0.0.0: iogroup/ExampleIOGroup.cpp iogroup/ExampleIOGroup.hpp
 	$(CXX) $(CXXFLAGS) -I ./iogroup $(GEOPM_PLUGIN_FLAGS) iogroup/ExampleIOGroup.cpp -o $@
+
+iogroup/libgeopmiogroup_stub_iogroup.so.0.0.0: iogroup/StubIOGroup.cpp iogroup/StubIOGroup.hpp
+	$(CXX) $(CXXFLAGS) -I ./iogroup $(GEOPM_PLUGIN_FLAGS) iogroup/StubIOGroup.cpp -o $@
 
 plugin_load/alice/libgeopmiogroup_alice.so.0.0.0: plugin_load/alice/AliceIOGroup.cpp plugin_load/alice/AliceIOGroup.hpp
 	$(CXX) $(CXXFLAGS) -I ./plugin_load/alice $(GEOPM_PLUGIN_FLAGS) plugin_load/alice/AliceIOGroup.cpp -o $@
