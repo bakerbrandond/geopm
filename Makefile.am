@@ -358,6 +358,8 @@ TUTORIAL_DIST = tutorial/Makefile \
                 tutorial/iogroup/ExampleIOGroup.cpp \
                 tutorial/iogroup/ExampleIOGroup.hpp \
                 tutorial/iogroup/README.md \
+                tutorial/iogroup/StubIOGroup.cpp \
+                tutorial/iogroup/StubIOGroup.hpp \
                 tutorial/plugin_load/alice/AliceIOGroup.cpp \
                 tutorial/plugin_load/alice/AliceIOGroup.hpp \
                 tutorial/plugin_load/bob/BobIOGroup.cpp \
