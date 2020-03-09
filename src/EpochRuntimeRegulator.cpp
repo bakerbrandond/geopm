@@ -102,9 +102,10 @@ namespace geopm
     double EpochRuntimeRegulatorImp::current_energy_pkg(void) const
     {
         double energy = 0.0;
-        int num_package = m_platform_topo.num_domain(GEOPM_DOMAIN_PACKAGE);
-        for (int pkg = 0; pkg < num_package; ++pkg) {
-            energy += m_platform_io.read_signal("ENERGY_PACKAGE", GEOPM_DOMAIN_PACKAGE, pkg);
+        int domain_energy = m_platform_io.signal_domain_type("ENERGY_PACKAGE");
+        int num_domain_energy = m_platform_topo.num_domain(domain_energy);
+        for (int dom_idx = 0; dom_idx < num_domain_energy; ++dom_idx) {
+            energy += m_platform_io.read_signal("ENERGY_PACKAGE", domain_energy, dom_idx);
         }
         return energy;
     }
@@ -112,9 +113,10 @@ namespace geopm
     double EpochRuntimeRegulatorImp::current_energy_dram(void) const
     {
         double energy = 0.0;
-        int num_dram = m_platform_topo.num_domain(GEOPM_DOMAIN_BOARD_MEMORY);
-        for (int dram = 0; dram < num_dram; ++dram) {
-            energy += m_platform_io.read_signal("ENERGY_DRAM", GEOPM_DOMAIN_BOARD_MEMORY, dram);
+        int domain_dram_energy = m_platform_io.signal_domain_type("ENERGY_DRAM");
+        int num_domain_dram_energy = m_platform_topo.num_domain(domain_dram_energy);
+        for (int dom_idx = 0; dom_idx < num_domain_dram_energy; ++dom_idx) {
+            energy += m_platform_io.read_signal("ENERGY_DRAM", domain_dram_energy, dom_idx);
         }
         return energy;
     }
