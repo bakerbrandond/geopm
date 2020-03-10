@@ -156,7 +156,8 @@ namespace geopm
     bool FrequencyGovernorImp::set_frequency_bounds(double freq_min, double freq_max)
     {
         if (freq_min < M_PLAT_FREQ_MIN || freq_max > M_PLAT_FREQ_MAX ||
-            freq_min > freq_max) {
+            freq_min > freq_max &&
+            (M_PLAT_FREQ_MIN == 0.0 && M_PLAT_FREQ_MAX == 0.0)) {
             throw Exception("FrequencyGovernorImp::" + std::string(__func__) + "(): invalid frequency bounds.",
                             GEOPM_ERROR_INVALID, __FILE__, __LINE__);
 
