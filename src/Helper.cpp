@@ -32,6 +32,8 @@
 
 #include "Helper.hpp"
 
+#include <iostream>
+#include <dlfcn.h>
 #include <unistd.h>
 #include <limits.h>
 #include <dirent.h>
@@ -43,8 +45,10 @@
 #include <fstream>
 #include <algorithm>
 #include <sstream>
+#include "geopm.h"
 #include "geopm_hash.h"
 #include "Exception.hpp"
+#include "Environment.hpp"
 #include "config.h"
 
 namespace geopm
@@ -220,4 +224,51 @@ namespace geopm
         snprintf(result, NAME_MAX, "0x%016" PRIx64, geopm_signal_to_field(signal));
         return result;
     }
+
+int geopmpolicy_load(void)
+{
+    int err = 0;
+    std::string env_plugin_path_str;
+    env_plugin_path_str = geopm::environment().plugin_path();
+    std::vector<std::string> plugin_paths {GEOPM_DEFAULT_PLUGIN_PATH};
+    std::string so_suffix = ".so." GEOPM_ABI_VERSION;
+
+    if (!env_plugin_path_str.empty()) {
+        for (auto it = so_suffix.begin(); it != so_suffix.end(); ++it) {
+            if (*it == ':') {
+                so_suffix.replace(it, it + 1, ".");
+            }
+        }
+        // load paths in reverse order from environment variable list
+        auto user_paths = geopm::string_split(env_plugin_path_str, ":");
+        std::reverse(user_paths.begin(), user_paths.end());
+        plugin_paths.insert(plugin_paths.end(), user_paths.begin(), user_paths.end());
+    }
+    std::vector<std::string> plugins;
+    for (const auto &path : plugin_paths) {
+        std::vector<std::string> files = geopm::list_directory_files(path);
+        for (const auto &name : files) {
+            if (geopm::string_ends_with(name, so_suffix) ||
+                geopm::string_ends_with(name, ".dylib")) {
+                if (geopm::string_begins_with(name, GEOPM_COMM_PLUGIN_PREFIX) ||
+                    geopm::string_begins_with(name, GEOPM_IOGROUP_PLUGIN_PREFIX) ||
+                    geopm::string_begins_with(name, GEOPM_AGENT_PLUGIN_PREFIX)) {
+                    plugins.push_back(path + "/" + name);
+                }
+            }
+        }
+    }
+    for (const auto &plugin : plugins) {
+        if (NULL == dlopen(plugin.c_str(), RTLD_NOLOAD)) {
+            if (NULL == dlopen(plugin.c_str(), RTLD_LAZY)) {
+#ifdef GEOPM_DEBUG
+                std::cerr << "Warning: <geopm> Failed to dlopen plugin with dlerror(): "
+                    << dlerror() << std::endl;
+#endif
+                err = -1;
+            }
+        }
+    }
+    return err;
+}
 }

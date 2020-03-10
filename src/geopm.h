@@ -40,6 +40,13 @@
 extern "C" {
 #endif
 
+/****************************/
+/* RUNTIME LOADABLE PLUGINS */
+/****************************/
+const char *GEOPM_AGENT_PLUGIN_PREFIX    = "libgeopmagent_";
+const char *GEOPM_IOGROUP_PLUGIN_PREFIX  = "libgeopmiogroup_";
+const char *GEOPM_COMM_PLUGIN_PREFIX     = "libgeopmcomm_";
+
 /***************************/
 /* APPLICATION REGION HASH */
 /***************************/

@@ -122,10 +122,10 @@ int StubIOGroup::control_domain_type(const std::string &control_name) const
 
 int StubIOGroup::push_signal(const std::string &signal_name, int domain_type, int domain_idx)
 {
-    if (m_is_active) {
-        throw geopm::Exception("StubIOGroup::push_signal(): cannot push a signal after read_batch() or adjust() has been called.",
-                        GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-    }
+    //if (m_is_active) {
+        //throw geopm::Exception("StubIOGroup::push_signal(): cannot push a signal after read_batch() or adjust() has been called.",
+                        //GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+    //}
     // these if are check_signal
     if (!is_valid_signal(signal_name)) {
         throw geopm::Exception("StubIOGroup::push_signal(): signal_name " + signal_name +
@@ -146,10 +146,10 @@ int StubIOGroup::push_signal(const std::string &signal_name, int domain_type, in
 
 int StubIOGroup::push_control(const std::string &control_name, int domain_type, int domain_idx)
 {
-    if (m_is_active) {
-        throw geopm::Exception("StubIOGroup::push_control(): cannot push a control after read_batch() or adjust() has been called.",
-                        GEOPM_ERROR_INVALID, __FILE__, __LINE__);
-    }
+    //if (m_is_active) {
+        //throw geopm::Exception("StubIOGroup::push_control(): cannot push a control after read_batch() or adjust() has been called.",
+                        //GEOPM_ERROR_INVALID, __FILE__, __LINE__);
+    //}
     // these if are check_control
     if (!is_valid_control(control_name)) {
         throw geopm::Exception("StubIOGroup::push_control(): control_name " + control_name +
@@ -234,6 +234,15 @@ std::unique_ptr<geopm::IOGroup> StubIOGroup::make_plugin(void)
     return geopm::make_unique<StubIOGroup>();
 }
 
+double sum(const std::vector<double> &operand)
+{
+    double result = NAN;
+    if (operand.size()) {
+        result = std::accumulate(operand.begin(), operand.end(), 0.0);
+    }
+    return result;
+}
+
 std::function<double(const std::vector<double> &)> StubIOGroup::agg_function(const std::string &signal_name) const
 {
     if (!is_valid_signal(signal_name)) {
@@ -241,7 +250,16 @@ std::function<double(const std::vector<double> &)> StubIOGroup::agg_function(con
                         " not valid for StubIOGroup",
                         GEOPM_ERROR_INVALID, __FILE__, __LINE__);
     }
-    return geopm::Agg::sum;
+    //return geopm::Agg::sum;
+    return sum;
+}
+
+#include <climits>
+std::string string_format_double(double signal)
+{
+    char result[NAME_MAX];
+    snprintf(result, NAME_MAX, "%.16g", signal);
+    return result;
 }
 
 std::function<std::string(double)> StubIOGroup::format_function(const std::string &signal_name) const
@@ -251,7 +269,8 @@ std::function<std::string(double)> StubIOGroup::format_function(const std::strin
                         " not valid for StubIOGroup",
                         GEOPM_ERROR_INVALID, __FILE__, __LINE__);
     }
-    return geopm::string_format_double;
+    //return geopm::string_format_double;
+    return string_format_double;
 }
 
 std::string StubIOGroup::signal_description(const std::string &signal_name) const
