@@ -192,10 +192,7 @@ static int geopm_pmpi_init(const char *exec_name)
             int mpi_thread_level = 0;
             pthread_attr_t thread_attr;
             int num_cpu = geopm_sched_num_cpu();
-            cpu_set_t *cpu_set = CPU_ALLOC(num_cpu);
-            if (NULL == cpu_set) {
-                err = ENOMEM;
-            }
+            cpu_set_t cpu_set;
             if (!err) {
                 err = PMPI_Query_thread(&mpi_thread_level);
             }
@@ -215,10 +212,10 @@ static int geopm_pmpi_init(const char *exec_name)
                     err = pthread_attr_init(&thread_attr);
                 }
                 if (!err) {
-                    err = geopm_sched_woomp(num_cpu, cpu_set);
+                    err = geopm_sched_woomp(&cpu_set);
                 }
                 if (!err) {
-                    err = pthread_attr_setaffinity_np(&thread_attr, CPU_ALLOC_SIZE(num_cpu), cpu_set);
+                    err = pthread_attr_setaffinity_np(&thread_attr, sizeof(cpu_set_t), &cpu_set);
                 }
                 if (!err) {
                     err = geopm_ctl_pthread(g_ctl, &thread_attr, &g_ctl_thread);
@@ -227,7 +224,6 @@ static int geopm_pmpi_init(const char *exec_name)
                     err = pthread_attr_destroy(&thread_attr);
                 }
             }
-            CPU_FREE(cpu_set);
         }
         if (!err) {
             err = geopm_env_do_profile(&do_profile);
