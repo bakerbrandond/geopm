@@ -193,12 +193,6 @@ static void geopm_proc_cpuset_once(void)
     if (!err) {
         CPU_ZERO(&g_proc_cpuset);
         memcpy(&g_proc_cpuset, proc_cpuset, sizeof(cpu_set_t));
-        int i;
-        unsigned char * tmp = (void *) &g_proc_cpuset;
-        for (i=0; i<sizeof(cpu_set_t); i++) {
-            printf("%02hhX ", tmp[i]);
-        }
-        printf("\n");
     }
     else {
         for (int i = 0; i < num_cpu; ++i) {
@@ -260,6 +254,12 @@ static void geopm_proc_cpuset_once(void)
 int geopm_sched_proc_cpuset(int num_cpu, cpu_set_t *proc_cpuset)
 {
     int err = pthread_once(&g_proc_cpuset_once, geopm_proc_cpuset_once);
+    int i;
+    unsigned char * tmp = (void *) &g_proc_cpuset;
+    for (i=0; i<sizeof(cpu_set_t); i++) {
+        printf("%02hhX ", tmp[i]);
+    }
+    printf("\n");
     if (!err) {
         // throw
     }
