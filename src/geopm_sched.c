@@ -167,14 +167,13 @@ static void geopm_proc_cpuset_once(void)
 {
     const char *status_path = "/proc/self/status";
     const int num_cpu = geopm_sched_num_cpu();
-    const int num_read = num_cpu / 32 + (num_cpu % 32 ? 1 : 0);
 
     int err = 0;
     uint32_t *proc_cpuset = NULL;
     FILE *fid = NULL;
 
     if (!err) {
-        proc_cpuset = calloc(num_read, sizeof(*proc_cpuset));
+        proc_cpuset = calloc(1, sizeof(cpu_set_t));
         if (proc_cpuset == NULL) {
             err = ENOMEM;
         }
@@ -192,12 +191,18 @@ static void geopm_proc_cpuset_once(void)
         fclose(fid);
     }
     if (!err) {
-        CPU_ZERO(g_proc_cpuset);
-        memcpy(g_proc_cpuset, proc_cpuset, sizeof(cpu_set_t));
+        CPU_ZERO(&g_proc_cpuset);
+        memcpy(&g_proc_cpuset, proc_cpuset, sizeof(cpu_set_t));
+        int i;
+        unsigned char * tmp = (void *) &g_proc_cpuset;
+        for (i=0; i<sizeof(cpu_set_t); i++) {
+            printf("%02hhX ", tmp[i]);
+        }
+        printf("\n");
     }
-    else if (g_proc_cpuset) {
+    else {
         for (int i = 0; i < num_cpu; ++i) {
-            CPU_SET(i, g_proc_cpuset);
+            CPU_SET(i, &g_proc_cpuset);
         }
     }
     if (proc_cpuset) {
@@ -216,12 +221,6 @@ static void *geopm_proc_cpuset_pthread(void *arg)
     void *result = NULL;
     CPU_ZERO(&g_proc_cpuset);
     err = sched_getaffinity(0, sizeof(cpu_set_t), &g_proc_cpuset);
-    int i;
-    unsigned char * tmp = (void *) &g_proc_cpuset;
-    for (i=0; i<sizeof(cpu_set_t); i++) {
-        printf("%02hhX ", tmp[i]);
-    }
-    printf("\n");
     if (err) {
         result = (void *)(size_t)(errno ? errno : GEOPM_ERROR_RUNTIME);
     }
@@ -232,9 +231,20 @@ static void geopm_proc_cpuset_once(void)
 {
     int err = 0;
     pthread_t tid;
+    pthread_attr_t attr;
 
+    CPU_ZERO(&g_proc_cpuset);
+    //for (int i = 0; i < geopm_sched_num_cpu(); ++i) {
+        //CPU_SET(i, &g_proc_cpuset);
+    //}
+    //err = pthread_attr_init(&attr);
+    //if (!err) {
+        //err = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &g_proc_cpuset);
+    //}
     if (!err) {
+        //err = pthread_create(&tid, &attr, geopm_proc_cpuset_pthread, NULL);
         err = pthread_create(&tid, NULL, geopm_proc_cpuset_pthread, NULL);
+        //pthread_attr_destroy(&attr);
     }
     if (!err) {
         void *result = NULL;
