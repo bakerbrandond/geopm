@@ -138,11 +138,13 @@ int geopm_sched_proc_cpuset_helper(int num_cpu, uint32_t *proc_cpuset, FILE *fid
                 }
             }
             for (read_idx = num_read - 1; !err && read_idx >= 0; --read_idx) {
-                int num_match = sscanf(line_ptr, "%x", proc_cpuset + read_idx);
+                uint32_t allowed_cpu;
+                int num_match = sscanf(line_ptr, "%x", &allowed_cpu);
                 if (num_match != 1) {
                     err = GEOPM_ERROR_RUNTIME;
                 }
                 else {
+                    CPU_SET(allowed_cpu, &g_proc_cpuset);
                     line_ptr = strchr(line_ptr, ',');
                     if (read_idx != 0 && line_ptr == NULL) {
                         err = GEOPM_ERROR_RUNTIME;
@@ -185,14 +187,11 @@ static void geopm_proc_cpuset_once(void)
         }
     }
     if (!err) {
+        CPU_ZERO(&g_proc_cpuset);
         err = geopm_sched_proc_cpuset_helper(num_cpu, proc_cpuset, fid);
     }
     if (fid) {
         fclose(fid);
-    }
-    if (!err) {
-        CPU_ZERO(&g_proc_cpuset);
-        memcpy(&g_proc_cpuset, proc_cpuset, sizeof(cpu_set_t));
     }
     else {
         for (int i = 0; i < num_cpu; ++i) {
