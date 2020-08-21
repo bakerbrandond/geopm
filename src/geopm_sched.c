@@ -254,12 +254,12 @@ static void geopm_proc_cpuset_once(void)
 int geopm_sched_proc_cpuset(int num_cpu, cpu_set_t *proc_cpuset)
 {
     int err = pthread_once(&g_proc_cpuset_once, geopm_proc_cpuset_once);
-    int i;
-    unsigned char * tmp = (void *) &g_proc_cpuset;
-    for (i=0; i<sizeof(cpu_set_t); i++) {
-        printf("%02hhX ", tmp[i]);
-    }
-    printf("\n");
+    //int i;
+    //unsigned char * tmp = (void *) &g_proc_cpuset;
+    //for (i=0; i<sizeof(cpu_set_t); i++) {
+        //printf("%02hhX ", tmp[i]);
+    //}
+    //printf("\n");
     if (!err) {
         // throw
     }
