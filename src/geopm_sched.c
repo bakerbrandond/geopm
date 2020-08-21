@@ -173,12 +173,7 @@ static void geopm_proc_cpuset_once(void)
     uint32_t *proc_cpuset = NULL;
     FILE *fid = NULL;
 
-    g_proc_cpuset = CPU_ALLOC(num_cpu);
-    if (g_proc_cpuset == NULL) {
-        err = ENOMEM;
-    }
     if (!err) {
-        g_proc_cpuset_size = CPU_ALLOC_SIZE(num_cpu);
         proc_cpuset = calloc(num_read, sizeof(*proc_cpuset));
         if (proc_cpuset == NULL) {
             err = ENOMEM;
@@ -197,21 +192,12 @@ static void geopm_proc_cpuset_once(void)
         fclose(fid);
     }
     if (!err) {
-        /* cpu_set_t is managed in units of unsigned long, and may have extra
-         * bits at the end with undefined values. If that happens,
-         * g_proc_cpuset_size may be greater than the size of proc_cpuset,
-         * resulting in reading past the end of proc_cpuset. Avoid this by
-         * only copying the number of bytes needed to contain the mask. Zero
-         * the destination first, since it may not be fully overwritten.
-         *
-         * See the CPU_SET(3) man page for more details about cpu_set_t.
-         */
-        CPU_ZERO_S(g_proc_cpuset_size, g_proc_cpuset);
-        memcpy(g_proc_cpuset, proc_cpuset, num_read * sizeof(*proc_cpuset));
+        CPU_ZERO(g_proc_cpuset);
+        memcpy(g_proc_cpuset, proc_cpuset, sizeof(cpu_set_t));
     }
     else if (g_proc_cpuset) {
         for (int i = 0; i < num_cpu; ++i) {
-            CPU_SET_S(i, g_proc_cpuset_size, g_proc_cpuset);
+            CPU_SET(i, g_proc_cpuset);
         }
     }
     if (proc_cpuset) {
