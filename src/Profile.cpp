@@ -231,19 +231,18 @@ namespace geopm
 
     void ProfileImp::init_cpu_list(int num_cpu)
     {
-        cpu_set_t *proc_cpuset = NULL;
-        proc_cpuset = CPU_ALLOC(num_cpu);
-        if (!proc_cpuset) {
-            throw Exception("ProfileImp: unable to allocate process CPU mask",
-                            ENOMEM, __FILE__, __LINE__);
-        }
-        geopm_sched_proc_cpuset(num_cpu, proc_cpuset);
+        cpu_set_t proc_cpuset;
+        geopm_sched_proc_cpuset(sizeof(cpu_set_t), &proc_cpuset);
         for (int i = 0; i < num_cpu; ++i) {
-            if (CPU_ISSET(i, proc_cpuset)) {
+            if (CPU_ISSET(i, &proc_cpuset)) {
                 m_cpu_list.push_front(i);
             }
         }
-        free(proc_cpuset);
+        std::cout << "init_cpu_list\t";
+        for (const int &cpu : m_cpu_list) {
+            std::cout << cpu << ", ";
+        }
+        std::cout << "\n";
     }
 
     void ProfileImp::init_cpu_affinity(int shm_num_rank)
