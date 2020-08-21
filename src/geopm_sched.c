@@ -266,7 +266,7 @@ int geopm_sched_proc_cpuset(int num_cpu, cpu_set_t *proc_cpuset)
     return err;
 }
 
-int geopm_sched_woomp(cpu_set_t *woomp)
+int geopm_sched_woomp(int num_cpu, cpu_set_t *woomp)
 {
     /*! @brief Function that returns a cpuset that has bits set for
                all CPUs enabled for the process which are not used by

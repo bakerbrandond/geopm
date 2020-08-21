@@ -212,7 +212,7 @@ static int geopm_pmpi_init(const char *exec_name)
                     err = pthread_attr_init(&thread_attr);
                 }
                 if (!err) {
-                    err = geopm_sched_woomp(&cpu_set);
+                    err = geopm_sched_woomp(0, &cpu_set);
                 }
                 if (!err) {
                     err = pthread_attr_setaffinity_np(&thread_attr, sizeof(cpu_set_t), &cpu_set);
