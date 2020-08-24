@@ -97,13 +97,13 @@ int geopm_sched_get_cpu(void)
 }
 
 static pthread_once_t g_proc_cpuset_once = PTHREAD_ONCE_INIT;
-static cpu_set_t g_proc_cpuset;
+static cpu_set_t *g_proc_cpuset;
 
 /* If /proc/self/status is usable and correct then parse this file to
    determine the process affinity. */
 #ifdef GEOPM_PROCFS
 
-int geopm_sched_proc_cpuset_helper(int num_cpu, uint32_t *proc_cpuset, FILE *fid)
+int geopm_sched_proc_cpuset_helper(int num_cpu, FILE *fid)
 {
     const char *key = "Cpus_allowed:";
     const size_t key_len = strlen(key);
@@ -111,6 +111,7 @@ int geopm_sched_proc_cpuset_helper(int num_cpu, uint32_t *proc_cpuset, FILE *fid
     int err = 0;
     char *line = NULL;
     size_t line_len = 0;
+    uint32_t allowed_cpu[num_read];
 
     int read_idx = 0;
     while ((getline(&line, &line_len, fid)) != -1) {
@@ -137,19 +138,23 @@ int geopm_sched_proc_cpuset_helper(int num_cpu, uint32_t *proc_cpuset, FILE *fid
                     }
                 }
             }
+            int curr_cpu = -1;
             for (read_idx = num_read - 1; !err && read_idx >= 0; --read_idx) {
-                uint32_t allowed_cpu;
-                int num_match = sscanf(line_ptr, "%x", &allowed_cpu);
+                int num_match = sscanf(line_ptr, "%x", &allowed_cpu[read_idx]);
                 if (num_match != 1) {
                     err = GEOPM_ERROR_RUNTIME;
                 }
                 else {
-                    CPU_SET(allowed_cpu, &g_proc_cpuset);
                     line_ptr = strchr(line_ptr, ',');
                     if (read_idx != 0 && line_ptr == NULL) {
                         err = GEOPM_ERROR_RUNTIME;
                     }
                     else {
+                        for (int i = 0; i < 32; ++i) {
+                            ++curr_cpu;
+                            if (allowed_cpu[read_idx] & (1 << i))
+                                CPU_SET(curr_cpu, g_proc_cpuset);
+                        }
                         ++line_ptr;
                     }
                 }
@@ -171,15 +176,8 @@ static void geopm_proc_cpuset_once(void)
     const int num_cpu = geopm_sched_num_cpu();
 
     int err = 0;
-    uint32_t *proc_cpuset = NULL;
     FILE *fid = NULL;
 
-    if (!err) {
-        proc_cpuset = calloc(1, sizeof(cpu_set_t));
-        if (proc_cpuset == NULL) {
-            err = ENOMEM;
-        }
-    }
     if (!err) {
         fid = fopen(status_path, "r");
         if (!fid) {
@@ -187,20 +185,16 @@ static void geopm_proc_cpuset_once(void)
         }
     }
     if (!err) {
-        CPU_ZERO(&g_proc_cpuset);
-        err = geopm_sched_proc_cpuset_helper(num_cpu, proc_cpuset, fid);
+        err = geopm_sched_proc_cpuset_helper(num_cpu, fid);
     }
     if (fid) {
         fclose(fid);
     }
-    else {
-        for (int i = 0; i < num_cpu; ++i) {
-            CPU_SET(i, &g_proc_cpuset);
-        }
-    }
-    if (proc_cpuset) {
-        free(proc_cpuset);
-    }
+    //else {
+        //for (int i = 0; i < num_cpu; ++i) {
+            //CPU_SET(i, g_proc_cpuset);
+        //}
+    //}
 }
 
 /* If /proc/self/status is not available spawn a pthread requesting an
@@ -212,8 +206,14 @@ static void *geopm_proc_cpuset_pthread(void *arg)
 {
     int err;
     void *result = NULL;
-    CPU_ZERO(&g_proc_cpuset);
-    err = sched_getaffinity(0, sizeof(cpu_set_t), &g_proc_cpuset);
+    err = sched_getaffinity(0, CPU_SETSIZE, g_proc_cpuset);
+    printf("geopm_proc_cpuset_pthread\t");
+    for (int i = 0; i < CPU_SETSIZE; ++i) {
+        if (CPU_ISSET(i, g_proc_cpuset)) {
+            printf("%d, ", i);
+        }
+    }
+    printf("\n");
     if (err) {
         result = (void *)(size_t)(errno ? errno : GEOPM_ERROR_RUNTIME);
     }
@@ -226,13 +226,12 @@ static void geopm_proc_cpuset_once(void)
     pthread_t tid;
     pthread_attr_t attr;
 
-    CPU_ZERO(&g_proc_cpuset);
     //for (int i = 0; i < geopm_sched_num_cpu(); ++i) {
-        //CPU_SET(i, &g_proc_cpuset);
+        //CPU_SET(i, g_proc_cpuset);
     //}
     //err = pthread_attr_init(&attr);
     //if (!err) {
-        //err = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &g_proc_cpuset);
+        //err = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), g_proc_cpuset);
     //}
     if (!err) {
         //err = pthread_create(&tid, &attr, geopm_proc_cpuset_pthread, NULL);
@@ -252,16 +251,9 @@ static void geopm_proc_cpuset_once(void)
 
 int geopm_sched_proc_cpuset(int num_cpu, cpu_set_t *proc_cpuset)
 {
+    g_proc_cpuset = proc_cpuset;
+    CPU_ZERO(g_proc_cpuset);
     int err = pthread_once(&g_proc_cpuset_once, geopm_proc_cpuset_once);
-    //int i;
-    //unsigned char * tmp = (void *) &g_proc_cpuset;
-    //for (i=0; i<sizeof(cpu_set_t); i++) {
-        //printf("%02hhX ", tmp[i]);
-    //}
-    //printf("\n");
-    if (!err) {
-        // throw
-    }
     return err;
 }
 
@@ -279,7 +271,7 @@ int geopm_sched_woomp(int num_cpu, cpu_set_t *woomp)
     if (!err) {
         /* Copy the process CPU mask into the output. */
         CPU_ZERO(woomp);
-        memcpy(woomp, &g_proc_cpuset, sizeof(cpu_set_t));
+        memcpy(woomp, &g_proc_cpuset, CPU_SETSIZE);
         /* Start an OpenMP parallel region and have each thread clear
            its bit from the mask. */
 #ifdef _OPENMP
