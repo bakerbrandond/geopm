@@ -49,11 +49,11 @@ int main(int argc, char** argv)
     // Initialize the MPI environment
     MPI_Init(&argc, &argv);
 
-    bool is_true = true;
-    uint64_t test = 0;
-    while (is_true) {
-        test++;
-    }
+    //bool is_true = true;
+    //uint64_t test = 0;
+    //while (is_true) {
+        //test++;
+    //}
     // Get the number of processes
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
