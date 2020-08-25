@@ -212,15 +212,13 @@ static int geopm_pmpi_init(const char *exec_name)
                 }
                 if (!err) {
                     err = geopm_sched_woomp(CPU_SETSIZE, &cpu_set);
-                }
-                if (!err) {
-                    err = pthread_attr_setaffinity_np(&thread_attr, CPU_SETSIZE, &cpu_set);
-                }
-                if (!err) {
-                    err = geopm_ctl_pthread(g_ctl, &thread_attr, &g_ctl_thread);
-                }
-                if (!err) {
-                    err = pthread_attr_destroy(&thread_attr);
+                    if (!err) {
+                        err = pthread_attr_setaffinity_np(&thread_attr, CPU_SETSIZE, &cpu_set);
+                    }
+                    if (!err) {
+                        err = geopm_ctl_pthread(g_ctl, &thread_attr, &g_ctl_thread);
+                    }
+                    (void) pthread_attr_destroy(&thread_attr);
                 }
             }
         }
