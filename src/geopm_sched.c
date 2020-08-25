@@ -190,11 +190,11 @@ static void geopm_proc_cpuset_once(void)
     if (fid) {
         fclose(fid);
     }
-    //else {
-        //for (int i = 0; i < num_cpu; ++i) {
-            //CPU_SET(i, g_proc_cpuset);
-        //}
-    //}
+    if (err) {
+        for (int i = 0; i < num_cpu; ++i) {
+            CPU_SET(i, g_proc_cpuset);
+        }
+    }
 }
 
 /* If /proc/self/status is not available spawn a pthread requesting an
