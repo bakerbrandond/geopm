@@ -92,7 +92,7 @@ if ENABLE_SCHED
     examples_print_affinity_LDADD  = $(MPI_CXXLIBS)
     examples_print_affinity_LDFLAGS  = $(AM_LDFLAGS) $(MPI_CXXLDFLAGS)
     examples_print_affinity_CFLAGS = $(AM_CFLAGS) $(MPI_CFLAGS) $(OPENMP_CFLAGS)
-    examples_print_affinity_CXXFLAGS = $(AM_CXXFLAGS) $(MPI_CXXFLAGS) $(OPENMP_CFLAGS)
+    examples_print_affinity_CXXFLAGS = $(AM_CXXFLAGS) $(MPI_CXXFLAGS) $(OPENMP_CFLAGS) -v -da -Q
 if ENABLE_FORTRAN
     noinst_PROGRAMS += examples/simple_prof_f
     examples_simple_prof_f_SOURCES = examples/simple_prof_f.f90
