@@ -191,7 +191,6 @@ static int geopm_pmpi_init(const char *exec_name)
 
             int mpi_thread_level = 0;
             pthread_attr_t thread_attr;
-            int num_cpu = geopm_sched_num_cpu();
             cpu_set_t cpu_set;
             if (!err) {
                 err = PMPI_Query_thread(&mpi_thread_level);

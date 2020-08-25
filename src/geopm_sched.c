@@ -224,7 +224,7 @@ static void geopm_proc_cpuset_once(void)
 {
     int err = 0;
     pthread_t tid;
-    pthread_attr_t attr;
+    //pthread_attr_t attr;
 
     //for (int i = 0; i < geopm_sched_num_cpu(); ++i) {
         //CPU_SET(i, g_proc_cpuset);
