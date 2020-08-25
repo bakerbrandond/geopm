@@ -207,13 +207,6 @@ static void *geopm_proc_cpuset_pthread(void *arg)
     int err;
     void *result = NULL;
     err = sched_getaffinity(0, CPU_SETSIZE, g_proc_cpuset);
-    printf("geopm_proc_cpuset_pthread\t");
-    for (int i = 0; i < CPU_SETSIZE; ++i) {
-        if (CPU_ISSET(i, g_proc_cpuset)) {
-            printf("%d, ", i);
-        }
-    }
-    printf("\n");
     if (err) {
         result = (void *)(size_t)(errno ? errno : GEOPM_ERROR_RUNTIME);
     }
