@@ -103,7 +103,7 @@ static cpu_set_t *g_proc_cpuset = NULL;
    determine the process affinity. */
 #ifdef GEOPM_PROCFS
 
-int geopm_sched_proc_cpuset_helper(int num_cpu, FILE *fid)
+int geopm_sched_proc_cpuset_helper(int num_cpu, cpu_set_t *proc_cpuset, FILE *fid)
 {
     const char *key = "Cpus_allowed:";
     const size_t key_len = strlen(key);
@@ -153,7 +153,7 @@ int geopm_sched_proc_cpuset_helper(int num_cpu, FILE *fid)
                         for (int i = 0; i < 32; ++i) {
                             ++curr_cpu;
                             if (allowed_cpu[read_idx] & (1 << i))
-                                CPU_SET(curr_cpu, g_proc_cpuset);
+                                CPU_SET(curr_cpu, proc_cpuset);
                         }
                         ++line_ptr;
                     }
@@ -186,7 +186,7 @@ static void geopm_proc_cpuset_once(void)
         }
     }
     if (!err) {
-        err = geopm_sched_proc_cpuset_helper(num_cpu, fid);
+        err = geopm_sched_proc_cpuset_helper(num_cpu, g_proc_cpuset, fid);
     }
     if (fid) {
         fclose(fid);
@@ -219,11 +219,7 @@ static void geopm_proc_cpuset_once(void)
         err = pthread_create(&tid, NULL, geopm_proc_cpuset_pthread, NULL);
     }
     if (!err) {
-        void *result = NULL;
-        err = pthread_join(tid, &result);
-        if (!err && result) {
-            err = (int)(size_t)result;
-        }
+        err = pthread_join(tid, NULL);
     }
 }
 
