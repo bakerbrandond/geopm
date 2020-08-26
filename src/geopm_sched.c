@@ -97,7 +97,7 @@ int geopm_sched_get_cpu(void)
 }
 
 static pthread_once_t g_proc_cpuset_once = PTHREAD_ONCE_INIT;
-static cpu_set_t *g_proc_cpuset;
+static cpu_set_t *g_proc_cpuset = NULL;
 
 /* If /proc/self/status is usable and correct then parse this file to
    determine the process affinity. */
@@ -175,6 +175,7 @@ static void geopm_proc_cpuset_once(void)
     const char *status_path = "/proc/self/status";
     const int num_cpu = geopm_sched_num_cpu();
 
+    // todo if g_proc_cpuset == NULL err out
     int err = 0;
     FILE *fid = NULL;
 
@@ -210,6 +211,7 @@ static void *geopm_proc_cpuset_pthread(void *arg)
 
 static void geopm_proc_cpuset_once(void)
 {
+    // todo if g_proc_cpuset == NULL err out
     int err = 0;
     pthread_t tid;
 
