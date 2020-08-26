@@ -192,7 +192,7 @@ static void geopm_proc_cpuset_once(void)
         fclose(fid);
     }
     if (err) {
-        for (int i = 0; i < num_cpu; ++i) {
+        for (int i = 0; i < CPU_SETSIZE; ++i) {
             CPU_SET(i, g_proc_cpuset);
         }
     }
@@ -205,7 +205,12 @@ static void geopm_proc_cpuset_once(void)
 
 static void *geopm_proc_cpuset_pthread(void *arg)
 {
-    sched_getaffinity(0, CPU_SETSIZE, g_proc_cpuset);
+    int err = sched_getaffinity(0, CPU_SETSIZE, g_proc_cpuset);
+    if (err) {
+        for (int i = 0; i < CPU_SETSIZE; ++i) {
+            CPU_SET(i, g_proc_cpuset);
+        }
+    }
     return NULL;
 }
 
