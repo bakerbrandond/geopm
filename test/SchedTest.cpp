@@ -39,7 +39,7 @@
 
 extern "C"
 {
-    int geopm_sched_proc_cpuset_helper(int num_cpu, uint32_t *proc_cpuset, FILE *fid);
+    int geopm_sched_proc_cpuset_helper(int num_cpu, cpu_set_t *proc_cpuset, FILE *fid);
 }
 
 class SchedTest: public :: testing :: Test
@@ -116,19 +116,16 @@ TEST_F(SchedTest, test_proc_cpuset_0)
     status_file << m_status_buffer_1;
     status_file.close();
 
-    cpu_set_t *cpu_set = CPU_ALLOC(256);
-    ASSERT_TRUE(cpu_set != NULL);
+    cpu_set_t cpu_set;
     FILE *fid = fopen(m_status_path.c_str(), "r");
     ASSERT_TRUE(fid != NULL);
-    int err = geopm_sched_proc_cpuset_helper(256, (uint32_t *)cpu_set, fid);
+    int err = geopm_sched_proc_cpuset_helper(256, &cpu_set, fid);
     ASSERT_TRUE(err == 0);
     fclose(fid);
 
     for (int i = 0; i < 256; ++i) {
-        ASSERT_TRUE(CPU_ISSET(i, cpu_set));
+        ASSERT_TRUE(CPU_ISSET(i, &cpu_set));
     }
-
-    free(cpu_set);
 }
 
 TEST_F(SchedTest, test_proc_cpuset_1)
@@ -235,19 +232,16 @@ TEST_F(SchedTest, test_proc_cpuset_8)
     status_file << m_status_buffer_1;
     status_file.close();
 
-    cpu_set_t *cpu_set = CPU_ALLOC(256);
-    ASSERT_TRUE(cpu_set != NULL);
+    cpu_set_t cpu_set;
     FILE *fid = fopen(m_status_path.c_str(), "r");
     ASSERT_TRUE(fid != NULL);
-    int err = geopm_sched_proc_cpuset_helper(256, (uint32_t *)cpu_set, fid);
+    int err = geopm_sched_proc_cpuset_helper(256, &cpu_set, fid);
     ASSERT_TRUE(err == 0);
     fclose(fid);
 
     for (int i = 0; i < 256; ++i) {
-        ASSERT_TRUE(CPU_ISSET(i, cpu_set));
+        ASSERT_TRUE(CPU_ISSET(i, &cpu_set));
     }
-
-    free(cpu_set);
 }
 
 void SchedTest::check_cpuset(const std::string &cpus_allowed, const std::vector<int> &cpus_allowed_vec)
@@ -258,26 +252,23 @@ void SchedTest::check_cpuset(const std::string &cpus_allowed, const std::vector<
     status_file << m_status_buffer_1;
     status_file.close();
 
-    cpu_set_t *cpu_set = CPU_ALLOC(256);
-    ASSERT_TRUE(cpu_set != NULL);
+    cpu_set_t cpu_set;
     FILE *fid = fopen(m_status_path.c_str(), "r");
     ASSERT_TRUE(fid != NULL);
-    int err = geopm_sched_proc_cpuset_helper(256, (uint32_t *)cpu_set, fid);
+    int err = geopm_sched_proc_cpuset_helper(256, &cpu_set, fid);
     ASSERT_TRUE(err == 0);
     fclose(fid);
 
     unsigned j = 0;
     for (int i = 0; i < 256; ++i) {
         if (j < cpus_allowed_vec.size() && i == cpus_allowed_vec[j]) {
-            ASSERT_TRUE(CPU_ISSET(i, cpu_set));
+            ASSERT_TRUE(CPU_ISSET(i, &cpu_set));
             ++j;
         }
         else {
-            ASSERT_TRUE(!CPU_ISSET(i, cpu_set));
+            ASSERT_TRUE(!CPU_ISSET(i, &cpu_set));
         }
     }
-
-    free(cpu_set);
 }
 
 
