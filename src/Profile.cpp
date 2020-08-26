@@ -236,17 +236,10 @@ namespace geopm
         if (!err) {
             for (int i = 0; i < CPU_SETSIZE; ++i) {
                 if (CPU_ISSET(i, &proc_cpuset)) {
-                    //printf("%d, ", i);
                     m_cpu_list.push_front(i);
                 }
             }
         }
-        //printf("\n");
-        //std::cout << "init_cpu_list\t";
-        //for (const int &cpu : m_cpu_list) {
-            //std::cout << cpu << ", ";
-        //}
-        //std::cout << "\n";
     }
 
     void ProfileImp::init_cpu_affinity(int shm_num_rank)
