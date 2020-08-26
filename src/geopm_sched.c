@@ -212,19 +212,9 @@ static void geopm_proc_cpuset_once(void)
 {
     int err = 0;
     pthread_t tid;
-    //pthread_attr_t attr;
 
-    //for (int i = 0; i < geopm_sched_num_cpu(); ++i) {
-        //CPU_SET(i, g_proc_cpuset);
-    //}
-    //err = pthread_attr_init(&attr);
-    //if (!err) {
-        //err = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), g_proc_cpuset);
-    //}
     if (!err) {
-        //err = pthread_create(&tid, &attr, geopm_proc_cpuset_pthread, NULL);
         err = pthread_create(&tid, NULL, geopm_proc_cpuset_pthread, NULL);
-        //pthread_attr_destroy(&attr);
     }
     if (!err) {
         void *result = NULL;
